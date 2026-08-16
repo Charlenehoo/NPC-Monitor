@@ -13,10 +13,10 @@ hook.Add("EntityEmitSound", PLUGIN_NAME .. "EntityEmitSound", function(data)
         local time = data.SoundTime
         local level = data.SoundLevel
         local pos = data.Pos
-        if time and level and pos then
+        if time and level and IsValid(pos) then
             net.Start(PLAYER_EMIT_SOUND)
-            net.WriteFloat(soundTime)
-            net.WriteFloat(soundLevel)
+            net.WriteFloat(time)
+            net.WriteFloat(level)
             net.WriteVector(pos)
             net.SendToServer()
         end
