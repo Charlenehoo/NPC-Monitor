@@ -22,7 +22,7 @@ net.Receive(NET_WORK_STRINGS.PLAYER_EMIT_SOUND, function(len, ply)
     local time = net.ReadFloat()
     local level = net.ReadFloat()
     local pos = net.ReadVector()
-    if time and level and IsValid(pos) then
+    if time and level and pos then
         local radius = soundLevelToSourceUnits(level)
         sound.EmitHint(SOUND_PLAYER, pos, radius, time, ply)
     end
@@ -31,15 +31,14 @@ end)
 hook.Add("EntityEmitSound", PLUGIN_NAME .. "EntityEmitSound", function(data)
     local ent = data.Entity
     if not ent:IsValid() then return end
+    if ent:IsPlayer() then return end
 
-    if ent:IsPlayer() or ent:GetOwner():IsPlayer() then
-        local time = data.SoundTime
-        local level = data.SoundLevel
-        local pos = data.Pos
-        if time and level and IsValid(pos) then
-            local radius = soundLevelToSourceUnits(level)
-            sound.EmitHint(SOUND_PLAYER, pos, radius, time, ent)
-        end
+    local time = data.SoundTime
+    local level = data.SoundLevel
+    local pos = data.Pos
+    if time and level and pos then
+        local radius = soundLevelToSourceUnits(level)
+        sound.EmitHint(SOUND_PLAYER, pos, radius, time, ent)
     end
 end)
 
