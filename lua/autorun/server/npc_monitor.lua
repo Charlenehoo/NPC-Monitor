@@ -1,4 +1,5 @@
 local PLUGIN_NAME = "NPC_MONITOR"
+local log = include("npc_monitor/log.lua")
 
 local function AddHook(eventName, func)
     return hook.Add(eventName, PLUGIN_NAME .. "_" .. eventName, func)
@@ -19,7 +20,6 @@ AddHook("Tick", function()
             continue
         end
 
-        -- 检测 Schedule 变化（直接查表，首次为 nil 会触发一次）
         local lastSchedule = lastSchedules[npc]
         local currentSchedule = npc:GetCurrentSchedule()
         if lastSchedule ~= currentSchedule then
@@ -27,7 +27,6 @@ AddHook("Tick", function()
             lastSchedules[npc] = currentSchedule
         end
 
-        -- 检测 NPC 状态变化（直接查表，首次为 nil 会触发一次）
         local lastState = lastStates[npc]
         local currentState = npc:GetNPCState()
         if lastState ~= currentState then
@@ -35,4 +34,12 @@ AddHook("Tick", function()
             lastStates[npc] = currentState
         end
     end
+end)
+
+AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+    log.trace(npc, "TranslateSchedule: ", lastSchedule, " -> ", currentSchedule)
+end)
+
+AddHook("OnStateChange", function(npc, lastState, currentState)
+    log.trace(npc, "StateChange: ", lastState, " -> ", currentState)
 end)
