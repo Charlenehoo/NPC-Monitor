@@ -84,6 +84,7 @@ AddHook("OnTranslateSchedule", function(npc, last, current)
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last), " -> ", getScheduleName(current))
     end
 end)
+
 AddHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
