@@ -68,25 +68,7 @@ local function shouldLog(npc)
     return true
 end
 
-AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue, currentValue)
-    if not shouldLog(npc) then return end
-    log.trace(
-        npc, "ConditionChange: ",
-        conditionName, " (ID:", conditionID, "): ",
-        tostring(lastValue), " -> ", tostring(currentValue)
-    )
-end)
-
-AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
-    if not shouldLog(npc) then return end
-    log.debug(
-        npc, "TranslateSchedule: ",
-        getScheduleName(lastSchedule), " -> ",
-        getScheduleName(currentSchedule)
-    )
-end)
-
-AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue, currentValue)
+AddHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not shouldLog(npc) then return end
 
     local status = currentValue and "SET" or "CLEAR"
@@ -95,4 +77,15 @@ AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue
         conditionName,
         " [", status, "]"
     )
+end)
+
+AddHook("OnTranslateSchedule", function(npc, last, current)
+    if shouldLog(npc) then
+        log.debug(npc, "TranslateSchedule: ", getScheduleName(last), " -> ", getScheduleName(current))
+    end
+end)
+AddHook("OnStateChange", function(npc, last, current)
+    if shouldLog(npc) then
+        log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
+    end
 end)
