@@ -24,6 +24,7 @@ net.Receive(NET_WORK_STRINGS.PLAYER_EMIT_SOUND, function(len, ply)
     local pos = net.ReadVector()
     if time and level and pos then
         local radius = soundLevelToSourceUnits(level)
+        print(string.format("Emit Hint Client Side, Radius: %f", radius))
         sound.EmitHint(SOUND_PLAYER, pos, radius, time, ply)
     end
 end)
@@ -31,14 +32,16 @@ end)
 hook.Add("EntityEmitSound", PLUGIN_NAME .. "EntityEmitSound", function(data)
     local ent = data.Entity
     if not ent:IsValid() then return end
-    if ent:IsPlayer() then return end
 
     local time = data.SoundTime
     local level = data.SoundLevel
-    local pos = data.Pos
+    local pos = data.Pos or ent:GetPos()
     if time and level and pos then
         local radius = soundLevelToSourceUnits(level)
         sound.EmitHint(SOUND_PLAYER, pos, radius, time, ent)
+
+        local name = data.SoundName
+        print(string.format("Emit Hint Server Side, Name: %s; Radius: %f", tostring(name), radius))
     end
 end)
 
@@ -115,8 +118,6 @@ hook.Add("Tick", PLUGIN_NAME .. "Tick", function()
                 ensureShootEnemyCoverEvery(1.5, npc)
             end
         elseif shouldShootAtHint then
-            if npc:GetEnemy() and npc:GetEnemy():Alive() then continue end
-
             local hint = npc:GetBestSoundHint(STRING_TO_NUMBER[hintType])
             if not hint then continue end
 
