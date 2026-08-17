@@ -29,6 +29,20 @@ AddHook("OnEntityCreated", function(entity)
 end)
 
 AddHook("Tick", function()
+    for name, id in pairs(COND) do
+        local lastConditions = allLastConditions[name] -- { npc -> has }
+        for npc in pairs(activeNPCS) do
+            if not IsValid(npc) then continue end
+
+            local lastCondition = lastConditions[npc]
+            local currentCondition = npc:HasCondition(id)
+            if lastCondition ~= currentCondition then
+                hook.Run("OnCondition", npc, name, id, lastCondition, currentCondition)
+                lastConditions[npc] = currentCondition
+            end
+        end
+    end
+
     for npc in pairs(activeNPCS) do
         if not IsValid(npc) then continue end
 
@@ -46,20 +60,6 @@ AddHook("Tick", function()
             lastStates[npc] = currentState
         end
     end
-
-    for name, id in pairs(COND) do
-        local lastConditions = allLastConditions[name] -- { npc -> has }
-        for npc in pairs(activeNPCS) do
-            if not IsValid(npc) then continue end
-
-            local lastCondition = lastConditions[npc]
-            local currentCondition = npc:HasCondition(id)
-            if lastCondition ~= currentCondition then
-                hook.Run("OnCondition", npc, name, id, lastCondition, currentCondition)
-                lastConditions[npc] = currentCondition
-            end
-        end
-    end
 end)
 
 local function shouldLog(npc)
@@ -68,9 +68,18 @@ local function shouldLog(npc)
     return true
 end
 
-AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not shouldLog(npc) then return end
     log.trace(
+        npc, "ConditionChange: ",
+        conditionName, " (ID:", conditionID, "): ",
+        tostring(lastValue), " -> ", tostring(currentValue)
+    )
+end)
+
+AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+    if not shouldLog(npc) then return end
+    log.debug(
         npc, "TranslateSchedule: ",
         getScheduleName(lastSchedule), " -> ",
         getScheduleName(currentSchedule)
@@ -79,18 +88,9 @@ end)
 
 AddHook("OnStateChange", function(npc, lastState, currentState)
     if not shouldLog(npc) then return end
-    log.debug(
+    log.info(
         npc, "StateChange: ",
         getStateName(lastState), " -> ",
         getStateName(currentState)
-    )
-end)
-
-AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue, currentValue)
-    if not shouldLog(npc) then return end
-    log.trace(
-        npc, "ConditionChange: ",
-        conditionName, " (ID:", conditionID, "): ",
-        tostring(lastValue), " -> ", tostring(currentValue)
     )
 end)
