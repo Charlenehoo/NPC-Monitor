@@ -4,14 +4,12 @@ local addHook = include("npc_monitor/add_hook.lua")
 
 addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not IsValid(npc) then return end
-
     if conditionID ~= COND.ENEMY_OCCLUDED then return end
-
     if not currentValue then return end
-
-    npc._DesiredSchedule = SCHED_SHOOT_ENEMY_COVER
-    npc._DesiredCount = 2
-    npc._DesiredExpired = CurTime() + 3
-
-    npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
+    if currentValue ~= SCHED_HIDE_AND_RELOAD and
+        currentValue ~= SCHED_RELOAD and
+        currentValue ~= 92 then
+        npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
+    end
+    npc:ClearCondition(COND.ENEMY_OCCLUDED)
 end, "ENEMY_OCCLUDED")
