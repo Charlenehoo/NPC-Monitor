@@ -151,6 +151,10 @@ for name, id in pairs(SCHEDULE_ENUM) do
     SCHEDULE_ID_TO_NAME[id] = name
 end
 local function getScheduleName(id)
-    return SCHEDULE_ID_TO_NAME[id] or ("SCHED_UNKNOWN_" .. id)
+    if not id then
+        return "SCHED_UNKNOWN"
+    else
+        return SCHEDULE_ID_TO_NAME[id] or ("SCHED_UNKNOWN_" .. id)
+    end
 end
 return getScheduleName

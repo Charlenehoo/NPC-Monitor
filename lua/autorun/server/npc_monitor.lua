@@ -8,8 +8,9 @@ local function AddHook(eventName, func)
 end
 
 local activeNPCS = setmetatable({}, { __mode = "k" })
-local lastSchedules = setmetatable({}, { __mode = "k" })
-local lastStates = setmetatable({}, { __mode = "k" })
+local lastSchedules = setmetatable({}, { __mode = "k" })  -- npc -> schedule
+local lastStates = setmetatable({}, { __mode = "k" })     -- npc -> state
+local lastConditions = setmetatable({}, { __mode = "k" }) -- npc -> { condition -> has}
 
 AddHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
@@ -41,10 +42,19 @@ AddHook("Tick", function()
             hook.Run("OnStateChange", npc, lastState, currentState)
             lastStates[npc] = currentState
         end
+
+        -- local
     end
 end)
 
+local function shouldLog(npc)
+    if not IsValid(npc) then return false end
+    if npc:GetClass() == "cdg_info_target" then return false end
+    return true
+end
+
 AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+    if not shouldLog(npc) then return end
     log.trace(
         npc, "TranslateSchedule: ",
         getScheduleName(lastSchedule), " -> ",
@@ -53,7 +63,8 @@ AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
 end)
 
 AddHook("OnStateChange", function(npc, lastState, currentState)
-    log.trace(
+    if not shouldLog(npc) then return end
+    log.debug(
         npc, "StateChange: ",
         getStateName(lastState), " -> ",
         getStateName(currentState)
