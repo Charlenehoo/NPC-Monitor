@@ -86,11 +86,13 @@ AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
     )
 end)
 
-AddHook("OnStateChange", function(npc, lastState, currentState)
+AddHook("OnConditionChange", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not shouldLog(npc) then return end
-    log.info(
-        npc, "StateChange: ",
-        getStateName(lastState), " -> ",
-        getStateName(currentState)
+
+    local status = currentValue and "SET" or "CLEAR"
+    log.trace(
+        npc, "ConditionChange: ",
+        conditionName,
+        " [", status, "]"
     )
 end)
