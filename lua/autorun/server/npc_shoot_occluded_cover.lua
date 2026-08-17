@@ -6,10 +6,14 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     if not IsValid(npc) then return end
     if conditionID ~= COND.ENEMY_OCCLUDED then return end
     if not currentValue then return end
-    if currentValue ~= SCHED_HIDE_AND_RELOAD and
-        currentValue ~= SCHED_RELOAD and
-        currentValue ~= 92 then
+
+    local currentSchedule = npc:GetCurrentSchedule()
+
+    if currentSchedule ~= SCHED_HIDE_AND_RELOAD and
+        currentSchedule ~= SCHED_RELOAD and
+        currentSchedule ~= 92 then
         npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
     end
+
     npc:ClearCondition(COND.ENEMY_OCCLUDED)
 end, "ENEMY_OCCLUDED")

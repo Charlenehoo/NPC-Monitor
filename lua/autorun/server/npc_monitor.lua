@@ -16,12 +16,14 @@ addHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
         if not IsValid(ent) or not ent:IsNPC() then continue end
         activeNPCS[ent] = true
+        ent:SetMaxLookDistance(6000)
     end
 end)
 
 addHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
     activeNPCS[entity] = true
+    entity:SetMaxLookDistance(6000)
 end)
 
 addHook("Tick", function()
