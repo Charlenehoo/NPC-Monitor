@@ -73,16 +73,16 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
         conditionName,
         " [", status, "]"
     )
-end)
+end, "LOG")
 
 addHook("OnTranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last), " -> ", getScheduleName(current))
     end
-end)
+end, "LOG")
 
 addHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
     end
-end)
+end, "LOG")
