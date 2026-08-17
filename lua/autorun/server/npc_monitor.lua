@@ -1,6 +1,7 @@
 local PLUGIN_NAME = "NPC_MONITOR"
 local log = include("npc_monitor/log.lua")
 local getScheduleName = include("npc_monitor/get_schedule_name.lua")
+local getStateName = include("npc_monitor/get_state_name.lua")
 
 local function AddHook(eventName, func)
     return hook.Add(eventName, PLUGIN_NAME .. "_" .. eventName, func)
@@ -52,5 +53,9 @@ AddHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
 end)
 
 AddHook("OnStateChange", function(npc, lastState, currentState)
-    log.trace(npc, "StateChange: ", lastState, " -> ", currentState)
+    log.trace(
+        npc, "StateChange: ",
+        getStateName(lastState), " -> ",
+        getStateName(currentState)
+    )
 end)
