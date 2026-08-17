@@ -1,11 +1,7 @@
-local PLUGIN_NAME = "NPC_MONITOR"
 local log = include("npc_monitor/log.lua")
+local addHook = include("npc_monitor/add_hook.lua")
 local getScheduleName = include("npc_monitor/get_schedule_name.lua")
 local getStateName = include("npc_monitor/get_state_name.lua")
-
-local function AddHook(eventName, func)
-    return hook.Add(eventName, PLUGIN_NAME .. "_" .. eventName, func)
-end
 
 local activeNPCS = setmetatable({}, { __mode = "k" })
 local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
@@ -16,19 +12,19 @@ for name, id in pairs(COND) do
     allLastConditions[name] = setmetatable({}, { __mode = "k" })
 end
 
-AddHook("InitPostEntity", function()
+addHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
         if not IsValid(ent) or not ent:IsNPC() then continue end
         activeNPCS[ent] = true
     end
 end)
 
-AddHook("OnEntityCreated", function(entity)
+addHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
     activeNPCS[entity] = true
 end)
 
-AddHook("Tick", function()
+addHook("Tick", function()
     for name, id in pairs(COND) do
         local lastConditions = allLastConditions[name] -- { npc -> has }
         for npc in pairs(activeNPCS) do
@@ -68,7 +64,7 @@ local function shouldLog(npc)
     return true
 end
 
-AddHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not shouldLog(npc) then return end
 
     local status = currentValue and "SET" or "CLEAR"
@@ -79,13 +75,13 @@ AddHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     )
 end)
 
-AddHook("OnTranslateSchedule", function(npc, last, current)
+addHook("OnTranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last), " -> ", getScheduleName(current))
     end
 end)
 
-AddHook("OnStateChange", function(npc, last, current)
+addHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
     end
