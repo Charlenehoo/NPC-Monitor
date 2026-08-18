@@ -45,23 +45,20 @@ local SHARED_PROTECTED_SCHEDULES = {
 -- 类别专属 schedule 保护表
 local CLASS_PROTECTED_SCHEDULES = {
     ["npc_combine_s"] = {
-        -- 战斗维持与面对
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_COMBAT_FACE] = true, -- 92 战斗面对（保持面向敌人）
-
         -- 换弹与武器操作
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD] = true, -- 93 掩体后换弹
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD] = true,
 
         -- 攻击动作
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1] = true,           -- 101 远程攻击1
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK2] = true,           -- 102 远程攻击2
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_AR2_ALTFIRE] = true,             -- 117 AR2 次要攻击
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_MOVE_TO_MELEE] = true,           -- 121 接近近战
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_GRENADE_COVER1] = true,          -- 106 手雷掩护1
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_TOSS_GRENADE_COVER1] = true,     -- 107 在掩体后投掷手雷
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_GRENADE_AND_RELOAD] = true,      -- 109 投雷并换弹
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_DROP_GRENADE] = true,            -- 113 投掷手雷
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_FORCED_GRENADE_THROW] = true,    -- 118 强制投掷手雷
-        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_MOVE_TO_FORCED_GREN_LOS] = true, -- 119 移动到强制投雷视线
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK2] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_AR2_ALTFIRE] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_MOVE_TO_MELEE] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_GRENADE_COVER1] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_TOSS_GRENADE_COVER1] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_GRENADE_AND_RELOAD] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_DROP_GRENADE] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_FORCED_GRENADE_THROW] = true,
+        [Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_MOVE_TO_FORCED_GREN_LOS] = true,
     },
     -- 以后可以加入其他 NPC：
     -- ["npc_citizen"] = {
@@ -70,12 +67,12 @@ local CLASS_PROTECTED_SCHEDULES = {
 }
 
 local function isProtectedSchedule(npc, schedule)
-    if SHARED_PROTECTED_SCHEDULES[schedule] then
+    local classSchedules = CLASS_PROTECTED_SCHEDULES[npc:GetClass()]
+    if classSchedules and classSchedules[schedule] then
         return true
     end
 
-    local classSchedules = CLASS_PROTECTED_SCHEDULES[npc:GetClass()]
-    if classSchedules and classSchedules[schedule] then
+    if SHARED_PROTECTED_SCHEDULES[schedule] then
         return true
     end
 
