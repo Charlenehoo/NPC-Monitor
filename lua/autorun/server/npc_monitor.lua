@@ -101,7 +101,7 @@ end, "LOG")
 
 addHook("OnTranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
-        log.debug(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
+        log.info(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
     end
 end, "LOG")
 

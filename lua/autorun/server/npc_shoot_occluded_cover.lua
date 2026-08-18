@@ -79,10 +79,42 @@ local function isProtectedSchedule(npc, schedule)
     return false
 end
 
+-- addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+--     if not IsValid(npc) then return end
+--     if conditionID ~= COND.ENEMY_OCCLUDED then return end
+--     if not currentValue then return end
+
+--     local currentSchedule = npc:GetCurrentSchedule()
+
+--     if isProtectedSchedule(npc, currentSchedule) then
+--         return
+--     end
+
+--     -- if currentSchedule == SCHED_SHOOT_ENEMY_COVER then return end
+--     npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
+-- end, "ENEMY_OCCLUDED_SET")
+
+-- addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+--     if not IsValid(npc) then return end
+--     if conditionID ~= COND.ENEMY_OCCLUDED then return end
+--     if currentValue then return end
+
+--     local TIMER_ID = "ENEMY_OCCLUDED_CLEAR"
+--     if timer.Exists(TIMER_ID) then return end
+--     timer.Create(TIMER_ID, 1.5, 1, function()
+--         if not IsValid(npc) then return end
+
+--         local currentSchedule = npc:GetCurrentSchedule()
+--         if currentSchedule ~= SCHED_SHOOT_ENEMY_COVER then return end
+
+--         npc:ClearSchedule()
+--     end)
+-- end, "ENEMY_OCCLUDED_CLEAR")
+
 addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not IsValid(npc) then return end
-    if conditionID ~= COND.ENEMY_OCCLUDED then return end
-    if not currentValue then return end
+    if conditionID ~= COND.HAVE_ENEMY_LOS then return end
+    if currentValue then return end -- 不要上升沿, 即要下降沿, 即丢失 LOS
 
     local currentSchedule = npc:GetCurrentSchedule()
 
@@ -90,5 +122,23 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
         return
     end
 
+    if currentSchedule == SCHED_SHOOT_ENEMY_COVER then return end
     npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
-end, "ENEMY_OCCLUDED")
+end, "ENEMY_OCCLUDED_SET")
+
+-- addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+--     if not IsValid(npc) then return end
+--     if conditionID ~= COND.ENEMY_OCCLUDED then return end
+--     if currentValue then return end
+
+--     local TIMER_ID = "ENEMY_OCCLUDED_CLEAR"
+--     if timer.Exists(TIMER_ID) then return end
+--     timer.Create(TIMER_ID, 1.5, 1, function()
+--         if not IsValid(npc) then return end
+
+--         local currentSchedule = npc:GetCurrentSchedule()
+--         if currentSchedule ~= SCHED_SHOOT_ENEMY_COVER then return end
+
+--         npc:ClearSchedule()
+--     end)
+-- end, "ENEMY_OCCLUDED_CLEAR")
