@@ -1,75 +1,81 @@
 -- npc_shoot_occluded_cover.lua
 local log = include("npc_monitor/log.lua")
 local addHook = include("npc_monitor/add_hook.lua")
-
 local CONSTANTS = include("npc_monitor/constants.lua")
 
-local INTERRUPT_CONDITIONS = {
-    COND.ENEMY_WENT_NULL,
-    COND.ENEMY_DEAD,
-    COND.LOST_ENEMY,
-    COND.ENEMY_TOO_FAR,
+-- 原因 ID 表（用于引用计数）
+local CAUSES = {
+    OCCLUDED = {
+        TRIGGER = {
+            COND.ENEMY_OCCLUDED,
+            COND.WEAPON_SIGHT_OCCLUDED,
+        },
+        INTERRUPT = {
+            COND.ENEMY_WENT_NULL,
+            COND.ENEMY_DEAD,
+            COND.LOST_ENEMY,
+            COND.ENEMY_TOO_FAR,
+            COND.LOW_PRIMARY_AMMO,
+            COND.NO_PRIMARY_AMMO,
+            COND.LIGHT_DAMAGE,
+            COND.HEAVY_DAMAGE,
+            COND.HEAR_DANGER,
+            COND.WEAPON_BLOCKED_BY_FRIEND,
+        },
+        -- 可选：原因触发时的额外逻辑（闭包）
+        ON_ADD = function(npc, reason)
+            -- 遮挡原因无需额外操作
+        end,
+    },
+    HEAR = {
+        TRIGGER = {
+            COND.HEAR_PLAYER,
+            COND.HEAR_BULLET_IMPACT,
+        },
+        INTERRUPT = {
+            COND.ENEMY_WENT_NULL,
+            COND.ENEMY_DEAD,
+            COND.LOST_ENEMY,
+            COND.LOW_PRIMARY_AMMO,
+            COND.NO_PRIMARY_AMMO,
+            COND.LIGHT_DAMAGE,
+            COND.HEAVY_DAMAGE,
+            COND.HEAR_DANGER,
+            COND.WEAPON_BLOCKED_BY_FRIEND,
+        },
+        ON_ADD = function(npc, reason)
+            local hint = npc:GetBestSoundHint()
+            if not hint then return false end -- 返回 false 表示不添加该原因
 
-    COND.LOW_PRIMARY_AMMO,
-    COND.NO_PRIMARY_AMMO,
+            local hintPos = hint.origin
+            local owner = hint.owner
 
-    COND.LIGHT_DAMAGE,
-    COND.HEAVY_DAMAGE,
+            if not hintPos then
+                if IsValid(owner) then
+                    hintPos = owner:GetPos()
+                else
+                    return false
+                end
+            end
 
-    COND.HEAR_DANGER,
+            -- 确定敌人：优先有效 owner，否则在范围内找最近玩家
+            local enemy = nil
+            if IsValid(owner) and owner:IsPlayer() then
+                enemy = owner
+            else
+                enemy = findNearestPlayer(hintPos, 1000)
+            end
+            if not IsValid(enemy) then return false end
 
-    COND.WEAPON_BLOCKED_BY_FRIEND,
+            npc:SetEnemy(enemy)
+            npc:UpdateEnemyMemory(enemy, hintPos)
+
+            return true -- 返回 true 表示可以添加该原因
+        end,
+    },
 }
 
-local function shouldInterrupt(npc)
-    for _, condID in ipairs(INTERRUPT_CONDITIONS) do
-        if npc:HasCondition(condID) then
-            return true
-        end
-    end
-
-    local enemy = npc:GetEnemy()
-    if not IsValid(enemy) or not enemy:Alive() then
-        return true
-    end
-
-    local lastSeen = npc:GetEnemyLastTimeSeen()
-    return CurTime() - lastSeen > CONSTANTS.SHOOT_COVER_DURATION
-end
-
-addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
-    if not IsValid(npc) then return end
-    if not currentValue then return end -- 只关心置位
-    if conditionID == COND.ENEMY_OCCLUDED or conditionID == COND.WEAPON_SIGHT_OCCLUDED then
-        local currentSchedule = npc:GetCurrentSchedule()
-        local desiredSchedule = SCHED_SHOOT_ENEMY_COVER
-        if currentSchedule == desiredSchedule then return end
-
-        if shouldInterrupt(npc) then
-            npc._desiredSchedule = nil
-            return
-        end
-
-        npc._desiredSchedule = desiredSchedule
-        npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
-    end
-end, "ENEMY_OCCLUDED")
-
-addHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
-    if not IsValid(npc) then return end
-
-    local desiredSchedule = npc._desiredSchedule
-    if lastSchedule ~= desiredSchedule then return end
-    if currentSchedule == desiredSchedule then return end
-
-    if shouldInterrupt(npc) then
-        npc._desiredSchedule = nil
-        return
-    end
-
-    npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
-end, "ENEMY_OCCLUDED")
-
+-- 查找最近玩家（用于没有 owner 的声音）
 local function findNearestPlayer(pos, maxDist)
     local nearestPlayer = nil
     local nearestDistSqr = maxDist and maxDist * maxDist or math.huge
@@ -85,46 +91,130 @@ local function findNearestPlayer(pos, maxDist)
     return nearestPlayer
 end
 
-addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
-    if not IsValid(npc) then return end
-    if not currentValue then return end
+-- 构建条件 ID -> 原因 ID 的反向映射（自动生成）
+local CONDITION_TO_REASON = {}
+for reason, data in pairs(CAUSES) do
+    for _, condID in ipairs(data.TRIGGER) do
+        CONDITION_TO_REASON[condID] = reason
+    end
+end
 
-    if conditionID ~= COND.HEAR_PLAYER and conditionID ~= COND.HEAR_BULLET_IMPACT then return end
+-- 通用中断检查：敌人无效或死亡
+local function checkCommonInterrupt(npc)
+    local enemy = npc:GetEnemy()
+    if not IsValid(enemy) or not enemy:Alive() then
+        return true
+    end
+    return false
+end
 
-    local hint = npc:GetBestSoundHint()
-    if not hint then return end
+-- 判断指定原因是否应该被移除（即该原因已不再有效）
+local function shouldRemoveCause(npc, reason)
+    -- 通用敌人有效性检查
+    if checkCommonInterrupt(npc) then
+        return true
+    end
 
-    local hintPos = hint.origin
-    local owner = hint.owner
-
-    -- 获取声音来源位置
-    if not hintPos then
-        if IsValid(owner) then
-            hintPos = owner:GetPos()
-        else
-            return
+    -- 检查该原因对应的中断条件
+    local interruptConds = CAUSES[reason].INTERRUPT or {}
+    for _, condID in ipairs(interruptConds) do
+        if npc:HasCondition(condID) then
+            return true
         end
     end
 
-    -- 确定敌人：优先有效 owner，否则在 1000 单位内找最近玩家
-    local enemy = nil
-    if IsValid(owner) and owner:IsPlayer() then
-        enemy = owner
-    else
-        enemy = findNearestPlayer(hintPos, 1000)
+    -- 原因特定的额外中断逻辑（目前仅遮挡原因有时间限制）
+    if reason == "OCCLUDED" then
+        local start = npc._desiredScheduleCauseStart[reason]
+        if start and (CurTime() - start) > CONSTANTS.SHOOT_COVER_DURATION then
+            return true
+        end
     end
-    if not IsValid(enemy) then return end
 
-    -- 如果当前敌人已经是这个玩家，且已经在射击计划中，避免重复设置
-    local currentEnemy = npc:GetEnemy()
-    local currentSchedule = npc:GetCurrentSchedule()
-    if IsValid(currentEnemy) and currentEnemy == enemy and currentSchedule == SCHED_SHOOT_ENEMY_COVER then
+    return false
+end
+
+-- 添加一个原因（引用计数加1）
+local function addCause(npc, reason)
+    -- 初始化字段
+    npc._desiredScheduleCauses = npc._desiredScheduleCauses or {}
+    npc._desiredScheduleCauseStart = npc._desiredScheduleCauseStart or {}
+
+    -- 如果该原因已存在，只更新开始时间（用于时间限制）
+    if npc._desiredScheduleCauses[reason] then
+        npc._desiredScheduleCauseStart[reason] = CurTime()
         return
     end
 
-    -- 设置敌人并更新记忆
-    npc:SetEnemy(enemy)
-    npc:UpdateEnemyMemory(enemy, hintPos)
+    -- 记录该原因
+    npc._desiredScheduleCauses[reason] = true
+    npc._desiredScheduleCauseStart[reason] = CurTime()
 
-    npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
-end, "HEAR_PLAYER")
+    -- 设置期望 Schedule
+    npc._desiredSchedule = SCHED_SHOOT_ENEMY_COVER
+
+    -- 立即尝试切换到目标 Schedule
+    if npc:GetCurrentSchedule() ~= SCHED_SHOOT_ENEMY_COVER then
+        npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
+    end
+end
+
+-- 移除一个原因（引用计数减1）
+local function removeCause(npc, reason)
+    if not npc._desiredScheduleCauses then return end
+
+    if npc._desiredScheduleCauses[reason] then
+        npc._desiredScheduleCauses[reason] = nil
+        npc._desiredScheduleCauseStart[reason] = nil
+
+        -- 如果没有原因了，清除期望 Schedule
+        if table.Count(npc._desiredScheduleCauses) == 0 then
+            npc._desiredSchedule = nil
+        end
+    end
+end
+
+-- 统一的 OnCondition 钩子，仅在上升沿添加原因
+addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+    if not IsValid(npc) then return end
+
+    -- 只处理上升沿（条件由假变真）
+    if not (currentValue and not lastValue) then return end
+
+    -- 从反向映射表中查找该条件属于哪个原因
+    local reason = CONDITION_TO_REASON[conditionID]
+    if not reason then return end
+
+    -- 执行原因特定的前置操作（闭包）
+    local causeData = CAUSES[reason]
+    if causeData.ON_ADD then
+        local canAdd = causeData.ON_ADD(npc, reason)
+        if canAdd == false then
+            return -- 前置操作失败，不添加该原因
+        end
+    end
+
+    -- 添加原因并设置期望 Schedule
+    addCause(npc, reason)
+end, "SHOOT_COVER_CAUSES")
+
+-- 当 NPC 离开目标 Schedule 时，检查并清理失效原因，决定是否重新强制
+addHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+    if not IsValid(npc) then return end
+
+    -- 只关心我们设置的目标 Schedule
+    if npc._desiredSchedule ~= SCHED_SHOOT_ENEMY_COVER then return end
+    if lastSchedule ~= SCHED_SHOOT_ENEMY_COVER or currentSchedule == SCHED_SHOOT_ENEMY_COVER then return end
+
+    -- 检查所有活跃原因，移除已失效的
+    for reason in pairs(npc._desiredScheduleCauses or {}) do
+        if shouldRemoveCause(npc, reason) then
+            removeCause(npc, reason)
+        end
+    end
+
+    -- 如果移除后还有原因，重新强制目标 Schedule
+    if npc._desiredSchedule == SCHED_SHOOT_ENEMY_COVER then
+        npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
+    end
+end, "SHOOT_COVER_MAINTAIN")
