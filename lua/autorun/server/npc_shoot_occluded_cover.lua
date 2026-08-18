@@ -35,8 +35,9 @@ local CAUSES = {
             COND.NO_PRIMARY_AMMO,
             COND.LIGHT_DAMAGE,
             COND.HEAVY_DAMAGE,
-            COND.HEAR_DANGER,
             COND.WEAPON_BLOCKED_BY_FRIEND,
+
+            COND.HEAR_DANGER,
         },
         DURATION = 6,
         -- OCCLUDED 无需 ON_ADD，直接添加
@@ -54,7 +55,6 @@ local CAUSES = {
             COND.NO_PRIMARY_AMMO,
             COND.LIGHT_DAMAGE,
             COND.HEAVY_DAMAGE,
-            COND.HEAR_DANGER,
             COND.WEAPON_BLOCKED_BY_FRIEND,
         },
         DURATION = 3,
