@@ -1,5 +1,7 @@
 local M = {}
 
 M.SHOOT_COVER_DURATION = 3
+M.SOUND_HINT_LAST = 1.5
+M.SOUND_HINT_RADIUS = 500
 
 return M

@@ -39,7 +39,7 @@ local CAUSES = {
 
             COND.HEAR_DANGER,
         },
-        DURATION = 6,
+        DURATION = 3,
         -- OCCLUDED 无需 ON_ADD，直接添加
     },
     HEAR = {
@@ -57,7 +57,7 @@ local CAUSES = {
             COND.HEAVY_DAMAGE,
             COND.WEAPON_BLOCKED_BY_FRIEND,
         },
-        DURATION = 3,
+        DURATION = CONSTANTS.SOUND_HINT_LAST,
         ON_ADD = function(npc, reason)
             local hint = npc:GetBestSoundHint()
             if not hint then return false end
