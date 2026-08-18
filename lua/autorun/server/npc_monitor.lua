@@ -12,6 +12,10 @@ for name, id in pairs(COND) do
     allLastConditions[name] = setmetatable({}, { __mode = "k" })
 end
 
+local function enhanceNPC(npc)
+    npc:SetMaxLookDistance(6000)
+end
+
 local function initNpc(npc)
     activeNPCS[npc] = true
     for name, id in pairs(COND) do
@@ -19,7 +23,8 @@ local function initNpc(npc)
     end
     lastSchedules[npc] = npc:GetCurrentSchedule()
     lastStates[npc] = npc:GetNPCState()
-    npc:SetMaxLookDistance(6000)
+
+    enhanceNPC(npc)
 end
 
 addHook("InitPostEntity", function()
