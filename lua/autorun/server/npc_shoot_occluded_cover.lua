@@ -174,29 +174,26 @@ end
 -- 统一的 OnCondition 钩子，仅在上升沿添加原因
 addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not IsValid(npc) then return end
-
-    -- 只处理上升沿（条件由假变真）
     if not (currentValue and not lastValue) then return end
 
-    -- 从反向映射表中查找该条件属于哪个原因
-    local reason = CONDITION_TO_REASON[conditionID]
-    if not reason then return end
-
-    -- 如果原因已存在，不做任何处理（包括不执行 ON_ADD）
     if npc._desiredScheduleCauses and npc._desiredScheduleCauses[reason] then
         return
     end
 
-    -- 执行原因特定的前置操作（闭包）
+    local reason = CONDITION_TO_REASON[conditionID]
+    if not reason then return end
+
+    -- 新增：先检查该原因是否应被中断
+    if shouldRemoveCause(npc, reason) then
+        return -- 不添加原因
+    end
+
     local causeData = CAUSES[reason]
     if causeData.ON_ADD then
         local canAdd = causeData.ON_ADD(npc, reason)
-        if canAdd == false then
-            return -- 前置操作失败，不添加该原因
-        end
+        if canAdd == false then return end
     end
 
-    -- 添加原因并设置期望 Schedule
     addCause(npc, reason)
 end, "SHOOT_COVER_CAUSES")
 
