@@ -8,7 +8,7 @@ local function makeReverseTable(t)
     return reverseT
 end
 
-M.SCHEDULE_ENUM = {
+M.SCHEDULE_ENUM               = {
     --- The schedule enum limit
     LAST_SHARED_SCHEDULE = 88,
     --- Begins AI script based on NPC's `m_hCine` save value.
@@ -156,9 +156,9 @@ M.SCHEDULE_ENUM = {
     --- Spot an enemy and go from an idle state to combat state.
     SCHED_WAKE_ANGRY = 4,
 }
-M.SCHEDULE_ID_TO_NAME = makeReverseTable(M.SCHEDULE_ENUM)
+M.SCHEDULE_ID_TO_NAME         = makeReverseTable(M.SCHEDULE_ENUM)
 
-M.COMBINE_SCHEDULE_ENUM = {
+M.COMBINE_SCHEDULE_ENUM       = {
     SCHED_COMBINE_SUPPRESS = 89,
     SCHED_COMBINE_COMBAT_FAIL = 90,
     SCHED_COMBINE_VICTORY_DANCE = 91,
@@ -195,7 +195,7 @@ M.COMBINE_SCHEDULE_ENUM = {
 }
 M.COMBINE_SCHEDULE_ID_TO_NAME = makeReverseTable(M.COMBINE_SCHEDULE_ENUM)
 
-M.NPC_STATE_ENUM = {
+M.NPC_STATE_ENUM              = {
     NPC_STATE_INVALID  = -1, -- Invalid state
     NPC_STATE_NONE     = 0,  -- NPC default state
     NPC_STATE_IDLE     = 1,  -- NPC is idle
@@ -206,6 +206,6 @@ M.NPC_STATE_ENUM = {
     NPC_STATE_PRONE    = 6,  -- NPC is prone to death
     NPC_STATE_DEAD     = 7,  -- NPC is dead
 }
-M.NPC_STATE_ID_TO_NAME = makeReverseTable(M.NPC_STATE_ID_TO_NAME)
+M.NPC_STATE_ID_TO_NAME        = makeReverseTable(M.NPC_STATE_ENUM)
 
 return M

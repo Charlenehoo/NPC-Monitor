@@ -1,6 +1,8 @@
 -- npc_shoot_occluded_cover.lua
 local log = include("npc_monitor/log.lua")
 local addHook = include("npc_monitor/add_hook.lua")
+local Enum = include("npc_monitor/enum.lua")
+local SCHED_COMBINE_COMBAT_FACE = Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_COMBAT_FACE
 
 addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not IsValid(npc) then return end
@@ -10,7 +12,7 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     local currentSchedule = npc:GetCurrentSchedule()
 
     if npc:GetClass() == "npc_combine_s" then
-        if currentSchedule == 92 then
+        if currentSchedule == SCHED_COMBINE_COMBAT_FACE then
             return
         end
     end
