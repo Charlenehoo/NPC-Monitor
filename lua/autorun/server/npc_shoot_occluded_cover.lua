@@ -3,6 +3,22 @@ local log = include("npc_monitor/log.lua")
 local addHook = include("npc_monitor/add_hook.lua")
 local CONSTANTS = include("npc_monitor/constants.lua")
 
+-- 查找最近玩家（用于没有 owner 的声音）
+local function findNearestPlayer(pos, maxDist)
+    local nearestPlayer = nil
+    local nearestDistSqr = maxDist and maxDist * maxDist or math.huge
+
+    for _, ply in ipairs(player.GetAll()) do
+        if not IsValid(ply) or not ply:Alive() then continue end
+        local distSqr = ply:GetPos():DistToSqr(pos)
+        if distSqr < nearestDistSqr then
+            nearestDistSqr = distSqr
+            nearestPlayer = ply
+        end
+    end
+    return nearestPlayer
+end
+
 -- 原因 ID 表（用于引用计数）
 local CAUSES = {
     OCCLUDED = {
@@ -22,10 +38,8 @@ local CAUSES = {
             COND.HEAR_DANGER,
             COND.WEAPON_BLOCKED_BY_FRIEND,
         },
-        -- 可选：原因触发时的额外逻辑（闭包）
-        ON_ADD = function(npc, reason)
-            -- 遮挡原因无需额外操作
-        end,
+        DURATION = 6,
+        -- OCCLUDED 无需 ON_ADD，直接添加
     },
     HEAR = {
         TRIGGER = {
@@ -43,9 +57,10 @@ local CAUSES = {
             COND.HEAR_DANGER,
             COND.WEAPON_BLOCKED_BY_FRIEND,
         },
+        DURATION = 3,
         ON_ADD = function(npc, reason)
             local hint = npc:GetBestSoundHint()
-            if not hint then return false end -- 返回 false 表示不添加该原因
+            if not hint then return false end
 
             local hintPos = hint.origin
             local owner = hint.owner
@@ -69,27 +84,10 @@ local CAUSES = {
 
             npc:SetEnemy(enemy)
             npc:UpdateEnemyMemory(enemy, hintPos)
-
-            return true -- 返回 true 表示可以添加该原因
+            return true
         end,
     },
 }
-
--- 查找最近玩家（用于没有 owner 的声音）
-local function findNearestPlayer(pos, maxDist)
-    local nearestPlayer = nil
-    local nearestDistSqr = maxDist and maxDist * maxDist or math.huge
-
-    for _, ply in ipairs(player.GetAll()) do
-        if not IsValid(ply) or not ply:Alive() then continue end
-        local distSqr = ply:GetPos():DistToSqr(pos)
-        if distSqr < nearestDistSqr then
-            nearestDistSqr = distSqr
-            nearestPlayer = ply
-        end
-    end
-    return nearestPlayer
-end
 
 -- 构建条件 ID -> 原因 ID 的反向映射（自动生成）
 local CONDITION_TO_REASON = {}
@@ -116,19 +114,19 @@ local function shouldRemoveCause(npc, reason)
     end
 
     -- 检查该原因对应的中断条件
-    local interruptConds = CAUSES[reason].INTERRUPT or {}
+    local causeData = CAUSES[reason]
+    local interruptConds = causeData.INTERRUPT or {}
     for _, condID in ipairs(interruptConds) do
         if npc:HasCondition(condID) then
             return true
         end
     end
 
-    -- 原因特定的额外中断逻辑（目前仅遮挡原因有时间限制）
-    if reason == "OCCLUDED" then
-        local start = npc._desiredScheduleCauseStart[reason]
-        if start and (CurTime() - start) > CONSTANTS.SHOOT_COVER_DURATION then
-            return true
-        end
+    -- 统一的时间限制检查
+    local duration = causeData.DURATION or CONSTANTS.SHOOT_COVER_DURATION
+    local start = npc._desiredScheduleCauseStart and npc._desiredScheduleCauseStart[reason]
+    if start and duration and duration > 0 and (CurTime() - start) > duration then
+        return true
     end
 
     return false
@@ -183,6 +181,11 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     -- 从反向映射表中查找该条件属于哪个原因
     local reason = CONDITION_TO_REASON[conditionID]
     if not reason then return end
+
+    -- 如果原因已存在，不做任何处理（包括不执行 ON_ADD）
+    if npc._desiredScheduleCauses and npc._desiredScheduleCauses[reason] then
+        return
+    end
 
     -- 执行原因特定的前置操作（闭包）
     local causeData = CAUSES[reason]
