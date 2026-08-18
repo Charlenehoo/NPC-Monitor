@@ -91,5 +91,4 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     end
 
     npc:SetSchedule(SCHED_SHOOT_ENEMY_COVER)
-    npc:ClearCondition(COND.ENEMY_OCCLUDED)
 end, "ENEMY_OCCLUDED")
