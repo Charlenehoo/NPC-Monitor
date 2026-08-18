@@ -176,16 +176,15 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
     if not IsValid(npc) then return end
     if not (currentValue and not lastValue) then return end
 
+    local reason = CONDITION_TO_REASON[conditionID]
+    if not reason then return end
+
     if npc._desiredScheduleCauses and npc._desiredScheduleCauses[reason] then
         return
     end
 
-    local reason = CONDITION_TO_REASON[conditionID]
-    if not reason then return end
-
-    -- 新增：先检查该原因是否应被中断
     if shouldRemoveCause(npc, reason) then
-        return -- 不添加原因
+        return
     end
 
     local causeData = CAUSES[reason]
