@@ -140,9 +140,8 @@ local function addCause(npc, reason)
     npc._desiredScheduleCauses = npc._desiredScheduleCauses or {}
     npc._desiredScheduleCauseStart = npc._desiredScheduleCauseStart or {}
 
-    -- 如果该原因已存在，只更新开始时间（用于时间限制）
+    -- 幂等：如果该原因已存在，则不做任何操作
     if npc._desiredScheduleCauses[reason] then
-        npc._desiredScheduleCauseStart[reason] = CurTime()
         return
     end
 
