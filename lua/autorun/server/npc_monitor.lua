@@ -6,6 +6,7 @@ local getStateName = include("npc_monitor/get_state_name.lua")
 local activeNPCS = setmetatable({}, { __mode = "k" })
 local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
 local lastStates = setmetatable({}, { __mode = "k" })    -- { npc -> state }
+local lastEnemies = setmetatable({}, { __mode = "k" })   -- { npc -> enemy }
 
 local allLastConditions = {}                             -- { condition -> { npc -> has } }
 for name, id in pairs(COND) do
@@ -23,6 +24,7 @@ local function initNpc(npc)
     end
     lastSchedules[npc] = npc:GetCurrentSchedule()
     lastStates[npc] = npc:GetNPCState()
+    lastEnemies[npc] = npc:GetEnemy()
 
     enhanceNPC(npc)
 end
@@ -70,6 +72,13 @@ addHook("Tick", function()
             hook.Run("OnStateChange", npc, lastState, currentState)
             lastStates[npc] = currentState
         end
+
+        local lastEnemy    = lastEnemies[npc]
+        local currentEnemy = npc:GetEnemy()
+        if lastEnemy ~= currentEnemy then
+            hook.Run("OnEnemyChange", npc, lastEnemy, currentEnemy)
+            lastEnemies[npc] = currentEnemy
+        end
     end
 end)
 
@@ -99,5 +108,13 @@ end, "LOG")
 addHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
+    end
+end, "LOG")
+
+addHook("OnEnemyChange", function(npc, last, current)
+    if shouldLog(npc) then
+        last = last or "No Enemy"
+        current = current or "No Enemy"
+        log.debug(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
     end
 end, "LOG")
