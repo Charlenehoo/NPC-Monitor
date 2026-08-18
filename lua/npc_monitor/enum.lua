@@ -159,7 +159,7 @@ M.SCHEDULE_ENUM               = {
 M.SCHEDULE_ID_TO_NAME         = makeReverseTable(M.SCHEDULE_ENUM)
 
 M.COMBINE_SCHEDULE_ENUM       = {
-    SCHED_COMBINE_SUPPRESS = 88,
+    SCHED_COMBINE_SUPPRESS = 88, -- == M.SCHEDULE_ENUM.LAST_SHARED_SCHEDULE == 88, 这似乎很奇怪, 确是正确的, 具体见 C:\Users\CharleneHoo\Dev\Gmod\source-sdk-2013\src\game\server\ai_basenpc.h
     SCHED_COMBINE_COMBAT_FAIL = 89,
     SCHED_COMBINE_VICTORY_DANCE = 90,
     SCHED_COMBINE_COMBAT_FACE = 91,
