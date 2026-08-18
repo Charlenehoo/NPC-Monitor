@@ -1,3 +1,9 @@
+local function fillReverseTable(t, reverseT)
+    for k, v in pairs(t) do
+        reverseT[v] = k
+    end
+end
+
 local SCHEDULE_ENUM = {
     --- The schedule enum limit
     LAST_SHARED_SCHEDULE = 88,
@@ -147,14 +153,68 @@ local SCHEDULE_ENUM = {
     SCHED_WAKE_ANGRY = 4,
 }
 local SCHEDULE_ID_TO_NAME = {}
-for name, id in pairs(SCHEDULE_ENUM) do
-    SCHEDULE_ID_TO_NAME[id] = name
-end
-local function getScheduleName(id)
+fillReverseTable(SCHEDULE_ENUM, SCHEDULE_ID_TO_NAME)
+
+local COMBINE_SCHEDULE_ENUM = {
+    SCHED_COMBINE_SUPPRESS = 89,
+    SCHED_COMBINE_COMBAT_FAIL = 90,
+    SCHED_COMBINE_VICTORY_DANCE = 91,
+    SCHED_COMBINE_COMBAT_FACE = 92,
+    SCHED_COMBINE_HIDE_AND_RELOAD = 93,
+    SCHED_COMBINE_SIGNAL_SUPPRESS = 94,
+    SCHED_COMBINE_ENTER_OVERWATCH = 95,
+    SCHED_COMBINE_OVERWATCH = 96,
+    SCHED_COMBINE_ASSAULT = 97,
+    SCHED_COMBINE_ESTABLISH_LINE_OF_FIRE = 98,
+    SCHED_COMBINE_PRESS_ATTACK = 99,
+    SCHED_COMBINE_WAIT_IN_COVER = 100,
+    SCHED_COMBINE_RANGE_ATTACK1 = 101,
+    SCHED_COMBINE_RANGE_ATTACK2 = 102,
+    SCHED_COMBINE_TAKE_COVER1 = 103,
+    SCHED_COMBINE_TAKE_COVER_FROM_BEST_SOUND = 104,
+    SCHED_COMBINE_RUN_AWAY_FROM_BEST_SOUND = 105,
+    SCHED_COMBINE_GRENADE_COVER1 = 106,
+    SCHED_COMBINE_TOSS_GRENADE_COVER1 = 107,
+    SCHED_COMBINE_TAKECOVER_FAILED = 108,
+    SCHED_COMBINE_GRENADE_AND_RELOAD = 109,
+    SCHED_COMBINE_PATROL = 110,
+    SCHED_COMBINE_BUGBAIT_DISTRACTION = 111,
+    SCHED_COMBINE_CHARGE_TURRET = 112,
+    SCHED_COMBINE_DROP_GRENADE = 113,
+    SCHED_COMBINE_CHARGE_PLAYER = 114,
+    SCHED_COMBINE_PATROL_ENEMY = 115,
+    SCHED_COMBINE_BURNING_STAND = 116,
+    SCHED_COMBINE_AR2_ALTFIRE = 117,
+    SCHED_COMBINE_FORCED_GRENADE_THROW = 118,
+    SCHED_COMBINE_MOVE_TO_FORCED_GREN_LOS = 119,
+    SCHED_COMBINE_FACE_IDEAL_YAW = 120,
+    SCHED_COMBINE_MOVE_TO_MELEE = 121,
+}
+local COMBINE_SCHEDULE_ID_TO_NAME = {}
+fillReverseTable(COMBINE_SCHEDULE_ENUM, COMBINE_SCHEDULE_ID_TO_NAME)
+
+-- 生成 schedule 名称
+-- @param id  schedule 的整数编号
+-- @param npc 可选，NPC 实体（用于区分不同类别的专属 schedule）
+-- @return 字符串形式的 schedule 名称
+local function getScheduleName(id, npc)
     if not id then
-        return "SCHED_UNKNOWN"
-    else
-        return SCHEDULE_ID_TO_NAME[id] or ("SCHED_UNKNOWN_" .. id)
+        return "NIL"
     end
+
+    if IsValid(npc) and npc:GetClass() == "npc_combine_s" then
+        local combineName = COMBINE_SCHEDULE_ID_TO_NAME[id]
+        if combineName then
+            return combineName
+        end
+    end
+
+    local sharedName = SCHEDULE_ID_TO_NAME[id]
+    if sharedName then
+        return sharedName
+    end
+
+    return "SCHED_UNKNOWN_" .. id
 end
+
 return getScheduleName
