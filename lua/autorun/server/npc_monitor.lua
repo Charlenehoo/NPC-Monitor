@@ -63,7 +63,7 @@ addUniqueHook("Tick", function()
         local lastSchedule = lastSchedules[npc]
         local currentSchedule = npc:GetCurrentSchedule()
         if lastSchedule ~= currentSchedule then
-            hook.Run("OnTranslateSchedule", npc, lastSchedule, currentSchedule)
+            hook.Run("TranslateSchedule", npc, lastSchedule, currentSchedule)
             lastSchedules[npc] = currentSchedule
         end
 
@@ -100,7 +100,7 @@ addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue
     )
 end)
 
-addUniqueHook("OnTranslateSchedule", function(npc, last, current)
+addUniqueHook("TranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
     end
