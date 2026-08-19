@@ -119,3 +119,11 @@ addUniqueHook("OnEnemyChange", function(npc, last, current)
         log.debug(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
     end
 end)
+
+NPCMonitor = NPCMonitor or {}
+
+function NPCMonitor.ForEachActiveNPC(callback)
+    for npc in pairs(activeNPCS) do
+        callback(npc)
+    end
+end
