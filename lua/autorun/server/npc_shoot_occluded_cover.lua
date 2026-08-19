@@ -240,7 +240,7 @@ addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue
 
     -- 正式添加原因
     addCause(npc, reason)
-end, "SHOOT_COVER_CAUSES")
+end)
 
 -- 当 NPC 离开目标 Schedule 时，清理失效原因并重新计算强制目标
 addUniqueHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
@@ -268,4 +268,4 @@ addUniqueHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule
             end
         end
     end
-end, "SHOOT_COVER_MAINTAIN")
+end)
