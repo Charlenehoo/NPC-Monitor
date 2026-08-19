@@ -19,7 +19,7 @@ local uniqueCounters = {}
 ---@param func function
 ---@return string identifier to remove this hook
 function M.addUniqueHook(eventName, func)
-    uniqueCounters[eventName] = uniqueCounters[eventName] or 0
+    uniqueCounters[eventName] = uniqueCounters[eventName] or 1
     local uniqueCounter = uniqueCounters[eventName]
 
     local hotFixFriendly = CONSTANTS.HOT_FIX_FRIENDLY
