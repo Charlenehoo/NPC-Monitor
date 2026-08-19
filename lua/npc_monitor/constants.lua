@@ -6,15 +6,12 @@ M.PLUGIN_NAME = "NPC_MONITOR"
 M.HOT_FIX_FRIENDLY = true
 
 M.RAGADOLL_DUMMY_CLASS = "ragdoll_dummy_target"
-
 M.NPC_MAX_LOOK_DISTANCE = 6000
 
 -- 默认原因持续时间（秒），当原因未单独配置 DURATION 时使用
 M.SHOOT_COVER_DURATION = 3
-
 -- 声音提示持续时间（秒），用于 HEAR 原因默认持续时间及 EmitHint 的 duration 参数
 M.SOUND_HINT_LAST = 1.5
-
 -- 声音提示半径，用于 EmitHint 的 volume 参数
 M.SOUND_HINT_RADIUS = 500
 

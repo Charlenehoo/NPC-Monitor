@@ -75,26 +75,28 @@ if SERVER then
             return
         end
 
-        local searchRadius
         local ragdollState = getRagdollState(ragdoll)
-        if ragdollState == "init" then
-            if CurTime() - self._CreateTime > MAX_INIT_DURATION then
+
+        if not self._Executioner then
+            local searchRadius
+            if ragdollState == "init" then
+                if CurTime() - self._CreateTime > MAX_INIT_DURATION then
+                    self:Remove()
+                    return
+                end
+            elseif ragdollState == "dead" then
                 self:Remove()
                 return
+            elseif ragdollState == "falling" then
+            elseif ragdollState == "writhing" then
+                searchRadius = 500
+            elseif ragdollState == "crawling" then
+                searchRadius = 1000
+            elseif ragdollState == "reviving" then
+                searchRadius = CONSTANTS.NPC_MAX_LOOK_DISTANCE
             end
-        elseif ragdollState == "dead" then
-            self:Remove()
-            return
-        elseif ragdollState == "falling" then
-        elseif ragdollState == "writhing" then
-            searchRadius = 500
-        elseif ragdollState == "crawling" then
-            searchRadius = 1000
-        elseif ragdollState == "reviving" then
-            searchRadius = CONSTANTS.NPC_MAX_LOOK_DISTANCE
+
+            self._Executioner = helpers.findNearestEntity()
         end
-
-
-        local bestMan = helpers.findNearestEntity()
     end
 end
