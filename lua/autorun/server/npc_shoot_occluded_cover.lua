@@ -3,7 +3,7 @@
 local CONSTANTS = include("npc_monitor/constants.lua")
 local log = include("npc_monitor/log.lua")
 local helpers = include("npc_monitor/helpers.lua")
-local addUniqueHook = include("npc_monitor/add_hook.lua")
+local addUniqueHook = helpers.addUniqueHook
 
 local config = include("npc_monitor/causes_config.lua")
 
@@ -202,13 +202,21 @@ addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue
         return
     end
 
+    local causeData = CAUSES[reason]
+    if not causeData then return end
+
+    -- 执行自定义添加回调
+    if causeData.ON_ADD then
+        local canAdd = causeData.ON_ADD(npc, reason)
+        if canAdd == false then
+            return
+        end
+    end
+
     -- 预检查：如果该原因当前应被中断，则不允许添加
     if shouldRemoveCause(npc, reason) then
         return
     end
-
-    local causeData = CAUSES[reason]
-    if not causeData then return end
 
     -- 入口优先级检查：判断新原因能否抢占当前活跃意图
     local entryPriority = causeData.ENTRY_PRIORITY or 0
@@ -228,14 +236,6 @@ addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue
 
     if not allow then
         return
-    end
-
-    -- 执行自定义添加回调
-    if causeData.ON_ADD then
-        local canAdd = causeData.ON_ADD(npc, reason)
-        if canAdd == false then
-            return
-        end
     end
 
     -- 正式添加原因
