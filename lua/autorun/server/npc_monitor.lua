@@ -1,7 +1,8 @@
 local log = include("npc_monitor/log.lua")
-local addHook = include("npc_monitor/add_hook.lua")
-local getScheduleName = include("npc_monitor/get_schedule_name.lua")
-local getStateName = include("npc_monitor/get_state_name.lua")
+local helpers = include("npc_monitor/helpers.lua")
+local addUniqueHook = helpers.addUniqueHook
+local getScheduleName = helpers.getScheduleName
+local getStateName = helpers.getStateName
 
 local activeNPCS = setmetatable({}, { __mode = "k" })
 local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
@@ -29,19 +30,19 @@ local function initNpc(npc)
     enhanceNPC(npc)
 end
 
-addHook("InitPostEntity", function()
+addUniqueHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
         if not IsValid(ent) or not ent:IsNPC() then continue end
         initNpc(ent)
     end
 end)
 
-addHook("OnEntityCreated", function(entity)
+addUniqueHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
     initNpc(entity)
 end)
 
-addHook("Tick", function()
+addUniqueHook("Tick", function()
     for name, id in pairs(COND) do
         local lastConditions = allLastConditions[name] -- { npc -> has }
         for npc in pairs(activeNPCS) do
@@ -88,7 +89,7 @@ local function shouldLog(npc)
     return true
 end
 
-addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not shouldLog(npc) then return end
 
     local status = currentValue and "SET" or "CLEAR"
@@ -97,24 +98,24 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
         conditionName,
         " [", status, "]"
     )
-end, "LOG")
+end)
 
-addHook("OnTranslateSchedule", function(npc, last, current)
+addUniqueHook("OnTranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
     end
-end, "LOG")
+end)
 
-addHook("OnStateChange", function(npc, last, current)
+addUniqueHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
     end
-end, "LOG")
+end)
 
-addHook("OnEnemyChange", function(npc, last, current)
+addUniqueHook("OnEnemyChange", function(npc, last, current)
     if shouldLog(npc) then
         last = last or "No Enemy"
         current = current or "No Enemy"
         log.debug(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
     end
-end, "LOG")
+end)
