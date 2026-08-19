@@ -1,10 +1,12 @@
 -- npc_shoot_occluded_cover.lua
 -- 意图调度核心：负责根据原因配置，强制 NPC 执行特定的 Schedule
-local log = include("npc_monitor/log.lua")
-local addHook = include("npc_monitor/add_hook.lua")
-local helpers = include("npc_monitor/helpers.lua")
-local config = include("npc_monitor/causes_config.lua")
 local CONSTANTS = include("npc_monitor/constants.lua")
+local log = include("npc_monitor/log.lua")
+local helpers = include("npc_monitor/helpers.lua")
+local addUniqueHook = include("npc_monitor/add_hook.lua")
+
+local config = include("npc_monitor/causes_config.lua")
+
 
 local CAUSES = config.CAUSES
 local CONDITION_TO_REASON = config.CONDITION_TO_REASON
@@ -188,7 +190,7 @@ local function removeCause(npc, reason)
 end
 
 -- 统一的 OnCondition 钩子：仅在触发条件的上升沿尝试激活原因
-addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
     if not IsValid(npc) then return end
     if not (currentValue and not lastValue) then return end
 
@@ -241,7 +243,7 @@ addHook("OnCondition", function(npc, conditionName, conditionID, lastValue, curr
 end, "SHOOT_COVER_CAUSES")
 
 -- 当 NPC 离开目标 Schedule 时，清理失效原因并重新计算强制目标
-addHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
+addUniqueHook("OnTranslateSchedule", function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
 
     -- 如果没有我们设置的目标 Schedule，则忽略
