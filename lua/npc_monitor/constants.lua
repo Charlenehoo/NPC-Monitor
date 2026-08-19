@@ -3,6 +3,7 @@
 local M = {}
 
 M.PLUGIN_NAME = "NPC_MONITOR"
+M.HOT_FIX_FRIENDLY = true
 
 -- 默认原因持续时间（秒），当原因未单独配置 DURATION 时使用
 M.SHOOT_COVER_DURATION = 3
