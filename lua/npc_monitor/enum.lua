@@ -33,8 +33,40 @@ M.SCHEDULE_ENUM               = {
     SCHED_BACK_AWAY_FROM_SAVE_POSITION = 26,
     --- Heavy damage was taken for the first time in a while.
     SCHED_BIG_FLINCH = 23,
+
     --- Begin chasing an enemy.
     SCHED_CHASE_ENEMY = 17,
+    -- //=========================================================
+    -- // > ChaseEnemy
+    -- //=========================================================
+    -- AI_DEFINE_SCHEDULE
+    -- (
+    -- 	SCHED_CHASE_ENEMY,
+
+    -- 	"	Tasks"
+    -- 	"		TASK_STOP_MOVING				0"
+    -- 	"		TASK_SET_FAIL_SCHEDULE			SCHEDULE:SCHED_CHASE_ENEMY_FAILED"
+    -- //	"		TASK_SET_TOLERANCE_DISTANCE		24"
+    -- 	"		TASK_GET_CHASE_PATH_TO_ENEMY	300"
+    -- 	"		TASK_RUN_PATH					0"
+    -- 	"		TASK_WAIT_FOR_MOVEMENT			0"
+    -- 	"		TASK_FACE_ENEMY			0"
+    -- 	""
+    -- 	"	Interrupts"
+    -- 	"		COND_NEW_ENEMY"
+    -- 	"		COND_ENEMY_DEAD"
+    -- 	"		COND_ENEMY_UNREACHABLE"
+    -- 	"		COND_CAN_RANGE_ATTACK1"
+    -- 	"		COND_CAN_MELEE_ATTACK1"
+    -- 	"		COND_CAN_RANGE_ATTACK2"
+    -- 	"		COND_CAN_MELEE_ATTACK2"
+    -- 	"		COND_TOO_CLOSE_TO_ATTACK"
+    -- 	"		COND_TASK_FAILED"
+    -- 	"		COND_LOST_ENEMY"
+    -- 	"		COND_BETTER_WEAPON_AVAILABLE"
+    -- 	"		COND_HEAR_DANGER"
+    -- );
+
     --- Failed to chase enemy.
     SCHED_CHASE_ENEMY_FAILED = 18,
     --- Face current enemy.
@@ -145,8 +177,38 @@ M.SCHEDULE_ENUM               = {
     SCHED_TAKE_COVER_FROM_ENEMY = 27,
     --- Flee from SaveValue: vLastKnownLocation
     SCHED_TAKE_COVER_FROM_ORIGIN = 30,
+
     --- Chase set NPC target.
     SCHED_TARGET_CHASE = 21,
+    -- //=========================================================
+    -- // > ChaseEnemy
+    -- //=========================================================
+    -- AI_DEFINE_SCHEDULE
+    -- (
+    -- 	SCHED_TARGET_CHASE,
+
+    -- 	"	Tasks"
+    -- 	"		TASK_STOP_MOVING				0"
+    -- //	"		TASK_SET_TOLERANCE_DISTANCE		24"
+    -- 	"		TASK_GET_PATH_TO_TARGET			0"
+    -- 	"		TASK_RUN_PATH					0"
+    -- 	"		TASK_WAIT_FOR_MOVEMENT			0"
+    -- 	""
+    -- 	"	Interrupts"
+    -- 	"		COND_NEW_ENEMY"
+    -- 	"		COND_ENEMY_DEAD"
+    -- 	"		COND_ENEMY_UNREACHABLE"
+    -- 	"		COND_CAN_RANGE_ATTACK1"
+    -- 	"		COND_CAN_MELEE_ATTACK1"
+    -- 	"		COND_CAN_RANGE_ATTACK2"
+    -- 	"		COND_CAN_MELEE_ATTACK2"
+    -- 	"		COND_TOO_CLOSE_TO_ATTACK"
+    -- 	"		COND_TASK_FAILED"
+    -- 	"		COND_LOST_ENEMY"
+    -- 	"		COND_BETTER_WEAPON_AVAILABLE"
+    -- 	"		COND_HEAR_DANGER"
+    -- );
+
     --- Face NPC target.
     SCHED_TARGET_FACE = 20,
     --- Human victory dance.
