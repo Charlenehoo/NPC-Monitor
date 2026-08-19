@@ -12,15 +12,27 @@ local function _addHook(eventName, func, appendix)
     return identifier
 end
 
-local uniqueCounter = 0
+local uniqueCounters = {}
 
 --- Add a unique hook, yet people won't be able to remove it unless they got its return valve
 ---@param eventName string
 ---@param func function
 ---@return string identifier to remove this hook
 function M.addUniqueHook(eventName, func)
-    uniqueCounter = uniqueCounter + 1
-    local appendix = tostring(CurTime()) .. "_" .. tostring(uniqueCounter) .. "_" .. tostring(math.random())
+    uniqueCounters[eventName] = uniqueCounters[eventName] or 0
+    local uniqueCounter = uniqueCounters[eventName]
+
+    local hotFixFriendly = CONSTANTS.HOT_FIX_FRIENDLY
+
+    local appendix
+    if hotFixFriendly then
+        appendix = uniqueCounter
+    else
+        appendix = tostring(uniqueCounter) .. tostring(CurTime()) .. "_" .. "_" .. tostring(math.random())
+    end
+
+    uniqueCounters[eventName] = uniqueCounters[eventName] + 1
+
     return _addHook(eventName, func, appendix)
 end
 
