@@ -87,25 +87,35 @@ function M.gaussianRandom()
     return math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
 end
 
--- 在指定位置附近查找最近的存活玩家
+-- 通用函数：在指定位置附近查找最近的符合过滤条件的实体
 -- @param pos Vector 中心位置
 -- @param maxDist number|nil 最大搜索距离（单位），nil 表示无限制
--- @return Player|nil 最近的存活玩家，若没有则返回 nil
-function M.findNearestPlayer(pos, maxDist)
-    local nearestPlayer = nil
-    local nearestDistSqr = maxDist and (maxDist * maxDist) or math.huge
+-- @param source function|table|nil 数据源：函数（返回实体列表）或实体列表（表），默认 ents.GetAll
+-- @param filterFunc function|nil 谓词函数，接收实体，返回 boolean，默认只检查 IsValid
+-- @return Entity|nil 最近的实体，若没有则返回 nil
+function M.findNearestEntity(pos, maxDist, source, filterFunc)
+    source = source or ents.GetAll
+    filterFunc = filterFunc or function(ent) return IsValid(ent) end
 
-    for _, ply in ipairs(player.GetAll()) do
-        if not IsValid(ply) or not ply:Alive() then continue end
+    local list = type(source) == "function" and source() or source
+    local nearest, nearestDistSqr = nil, (maxDist and maxDist * maxDist) or math.huge
 
-        local distSqr = ply:GetPos():DistToSqr(pos)
-        if distSqr < nearestDistSqr then
-            nearestDistSqr = distSqr
-            nearestPlayer = ply
+    for _, ent in ipairs(list) do
+        if filterFunc(ent) then
+            local distSqr = ent:GetPos():DistToSqr(pos)
+            if distSqr < nearestDistSqr then
+                nearestDistSqr = distSqr
+                nearest = ent
+            end
         end
     end
+    return nearest
+end
 
-    return nearestPlayer
+function M.findNearestPlayer(pos, maxDist)
+    return M.findNearestEntity(pos, maxDist, player.GetAll, function(ent)
+        return IsValid(ent) and ent:Alive()
+    end)
 end
 
 return M

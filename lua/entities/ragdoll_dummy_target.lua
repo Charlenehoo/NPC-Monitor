@@ -4,6 +4,8 @@ ENT.Base = "base_ai"
 ENT.Type = "ai"
 
 if SERVER then
+    local CONSTANTS = include("npc_monitor/constants.lua")
+
     local PROXY_MODEL = "models/editor/cube_small.mdl"
     local SCALE_1 = 0.03125 -- 1 / 32
     local OFFSET = 48
@@ -54,6 +56,13 @@ if SERVER then
         end
     end
 
+    local helpers = include("npc_monitor/helpers.lua")
+    local findNearestLOS = helpers.findNearestLOS
+
+    local function findNearestLOS(r)
+        -- IsLineOfSightClear
+    end
+
     function ENT:Think()
         if CurTime() - self._CreateTime > MAX_INIT_DURATION and table.IsEmpty(self._PotentialExecutioners) then
             self:Remove()
@@ -66,6 +75,7 @@ if SERVER then
             return
         end
 
+        local searchRadius
         local ragdollState = getRagdollState(ragdoll)
         if ragdollState == "init" then
             if CurTime() - self._CreateTime > MAX_INIT_DURATION then
@@ -76,6 +86,15 @@ if SERVER then
             self:Remove()
             return
         elseif ragdollState == "falling" then
+        elseif ragdollState == "writhing" then
+            searchRadius = 500
+        elseif ragdollState == "crawling" then
+            searchRadius = 1000
+        elseif ragdollState == "reviving" then
+            searchRadius = CONSTANTS.NPC_MAX_LOOK_DISTANCE
         end
+
+
+        local bestMan = helpers.findNearestEntity()
     end
 end

@@ -1,3 +1,4 @@
+local CONSTANTS = include("npc_monitor/constants.lua")
 local log = include("npc_monitor/log.lua")
 local helpers = include("npc_monitor/helpers.lua")
 local addUniqueHook = helpers.addUniqueHook
@@ -5,6 +6,7 @@ local getScheduleName = helpers.getScheduleName
 local getStateName = helpers.getStateName
 
 local activeNPCS = setmetatable({}, { __mode = "k" })
+local activeDummies = setmetatable({}, { __mode = "k" })
 local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
 local lastStates = setmetatable({}, { __mode = "k" })    -- { npc -> state }
 local lastEnemies = setmetatable({}, { __mode = "k" })   -- { npc -> enemy }
@@ -15,7 +17,7 @@ for name, id in pairs(COND) do
 end
 
 local function enhanceNPC(npc)
-    npc:SetMaxLookDistance(6000)
+    npc:SetMaxLookDistance(CONSTANTS.NPC_MAX_LOOK_DISTANCE)
 end
 
 local function initNpc(npc)
@@ -33,13 +35,26 @@ end
 addUniqueHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
         if not IsValid(ent) or not ent:IsNPC() then continue end
-        initNpc(ent)
+        if ent:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then
+            activeDummies[ent] = true
+        else
+            initNpc(ent)
+        end
     end
 end)
 
 addUniqueHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
-    initNpc(entity)
+    if entity:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then
+        activeDummies[entity] = true
+    else
+        initNpc(entity)
+    end
+end)
+
+addUniqueHook("EntityRemoved", function(ent, _)
+    activeNPCS[ent] = nil
+    activeDummies[ent] = nil
 end)
 
 addUniqueHook("Tick", function()
@@ -125,5 +140,11 @@ NPCMonitor = NPCMonitor or {}
 function NPCMonitor.ForEachActiveNPC(callback)
     for npc in pairs(activeNPCS) do
         callback(npc)
+    end
+end
+
+function NPCMonitor.ForEachActiveDummy(callback)
+    for dummy in pairs(activeDummies) do
+        callback(dummy)
     end
 end
