@@ -110,7 +110,7 @@ function ENT:_GetRagdollState(ragdoll)
 
     local lastState = self._LastRagdollState
     if lastState ~= stateName then
-        log.debug(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
+        log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
         self._LastRagdollState = stateName
     end
 

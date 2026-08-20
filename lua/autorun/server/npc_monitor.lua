@@ -111,16 +111,16 @@ local function shouldLog(npc)
     return true
 end
 
-addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
-    if not shouldLog(npc) then return end
+-- addUniqueHook("OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
+--     if not shouldLog(npc) then return end
 
-    local status = currentValue and "SET" or "CLEAR"
-    log.trace(
-        npc, "ConditionChange: ",
-        conditionName,
-        " [", status, "]"
-    )
-end)
+--     local status = currentValue and "SET" or "CLEAR"
+--     log.trace(
+--         npc, "ConditionChange: ",
+--         conditionName,
+--         " [", status, "]"
+--     )
+-- end)
 
 addUniqueHook("TranslateSchedule", function(npc, last, current)
     if shouldLog(npc) then
@@ -130,7 +130,7 @@ end)
 
 addUniqueHook("OnStateChange", function(npc, last, current)
     if shouldLog(npc) then
-        log.debug(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
+        log.info(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
     end
 end)
 
@@ -138,7 +138,7 @@ addUniqueHook("OnEnemyChange", function(npc, last, current)
     if shouldLog(npc) then
         last = last or "No Enemy"
         current = current or "No Enemy"
-        log.debug(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
+        log.trace(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
     end
 end)
 
