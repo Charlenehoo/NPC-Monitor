@@ -146,12 +146,12 @@ NPCMonitor = NPCMonitor or {}
 
 function NPCMonitor.ForEachActiveNPC(callback)
     for npc in pairs(activeNPCS) do
-        callback(npc)
+        if callback(npc) then break end
     end
 end
 
 function NPCMonitor.ForEachActiveDummy(callback)
     for dummy in pairs(activeDummies) do
-        callback(dummy)
+        if callback(dummy) then break end
     end
 end

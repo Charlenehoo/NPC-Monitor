@@ -1,3 +1,8 @@
+local CONSTANTS = include("npc_monitor/constants.lua")
+local Enum      = include("enum.lua")
+local log       = include("npc_monitor/log.lua")
+local helpers   = include("npc_monitor/helpers.lua")
+
 local function idleHandler(npc, lastSchedule, currentSchedule)
     local dummyOfChoice
 
@@ -21,7 +26,7 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
     NPCMonitor.ForEachActiveDummy(function(dummy)
         if IsValid(dummy) then
             dummyOfChoice = dummy
-            return
+            return true
         end
     end)
     if dummyOfChoice then
@@ -33,6 +38,18 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function combatHandler(npc, lastSchedule, currentSchedule)
+    if (lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1 or
+            lastSchedule == SCHED_RANGE_ATTACK1) and
+        npc:HasCondition(COND.ENEMY_OCCLUDED) then
+        return SCHED_SHOOT_ENEMY_COVER
+    end
+
+    if lastSchedule == SCHED_SHOOT_ENEMY_COVER and
+        npc:HasCondition(COND.ENEMY_OCCLUDED) and
+        not npc:HasCondition(COND.LOST_ENEMY) then
+        return SCHED_SHOOT_ENEMY_COVER
+    end
+
     return nil
 end
 
