@@ -27,20 +27,32 @@ if SERVER then
 
     function ENT:_TryRefreshPotentialExecutioners()
         local owner = self._Owner
-        if not IsValid(owner) then return end
+        local ragdoll = self._Ragdoll
 
-        local newPotentialExecutioners = {}
-        NPCMonitor.ForEachActiveNPC(function(npc)
-            if not IsValid(npc) then return end
+        if not IsValid(ragdoll) then
+            self._PotentialExecutioners = {}
+            return
+        end
 
-            local d, _ = npc:Disposition(owner)
-            if d == D_HT or d == D_FR then
-                table.insert(newPotentialExecutioners, npc)
+        if IsValid(owner) then
+            local newList = {}
+            NPCMonitor.ForEachActiveNPC(function(npc)
+                if not IsValid(npc) then return end
+                local d = npc:Disposition(owner)
+                if d == D_HT or d == D_FR then
+                    table.insert(newList, npc)
+                end
+            end)
+            self._PotentialExecutioners = newList
+        else
+            local oldList = self._PotentialExecutioners or {}
+            local cleaned = {}
+            for _, npc in ipairs(oldList) do
+                if IsValid(npc) then
+                    table.insert(cleaned, npc)
+                end
             end
-        end)
-
-        if newPotentialExecutioners and #newPotentialExecutioners ~= 0 then
-            self._PotentialExecutioners = newPotentialExecutioners
+            self._PotentialExecutioners = cleaned
         end
     end
 
