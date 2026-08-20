@@ -6,6 +6,7 @@ ENT.Type = "ai"
 if CLIENT then return end
 
 local CONSTANTS = include("npc_monitor/constants.lua")
+local log = include("npc_monitor/log.lua")
 local helpers = include("npc_monitor/helpers.lua")
 local findNearestEntity = helpers.findNearestEntity
 local getEyePos = helpers.getEyePos
@@ -150,7 +151,7 @@ function ENT:Think()
 
         if IsValid(self._Executioner) then
             local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (shootPos - ragdollEyePos):Normalize()
+            local dir = (shootPos - ragdollEyePos):GetNormalized()
             self:SetPos(ragdollEyePos + dir * OFFSET)
             self:SetAngles(dir:Angle())
             return
