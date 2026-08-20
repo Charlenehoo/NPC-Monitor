@@ -124,8 +124,13 @@ function ENT:_GetRagdollState(ragdoll)
             end
         end
     end
-    if (hp_c ~= nil and hp_c <= -100) or (hp_d ~= nil and hp_d <= -100) then
-        stateName = "dead"
+
+    -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
+    local JUST_FOR_SURE_OFFSET = 100
+    if stateName == "dead" then
+        if (hp_c == nil or hp_c > -JUST_FOR_SURE_OFFSET) and (hp_d == nil or hp_d > -JUST_FOR_SURE_OFFSET) then
+            stateName = "writhing"
+        end
     end
 
     local lastState = self._LastRagdollState
