@@ -225,7 +225,32 @@ M.COMBINE_SCHEDULE_ENUM       = {
     SCHED_COMBINE_COMBAT_FAIL = 89,
     SCHED_COMBINE_VICTORY_DANCE = 90,
     SCHED_COMBINE_COMBAT_FACE = 91,
+
     SCHED_COMBINE_HIDE_AND_RELOAD = 92,
+    --  //=========================================================
+    --  // 	SCHED_HIDE_AND_RELOAD	
+    --  //=========================================================
+    --  DEFINE_SCHEDULE
+    --  (
+    --  SCHED_COMBINE_HIDE_AND_RELOAD,
+
+    --  "	Tasks"
+    --  "		TASK_SET_FAIL_SCHEDULE		SCHEDULE:SCHED_RELOAD"
+    --  "		TASK_FIND_COVER_FROM_ENEMY	0"
+    --  "		TASK_RUN_PATH				0"
+    --  "		TASK_WAIT_FOR_MOVEMENT		0"
+    --  "		TASK_REMEMBER				MEMORY:INCOVER"
+    --  "		TASK_FACE_ENEMY				0"
+    --  "		TASK_RELOAD					0"
+    --  ""
+    --  "	Interrupts"
+    --  "		COND_CAN_MELEE_ATTACK1"
+    --  "		COND_CAN_MELEE_ATTACK2"
+    --  "		COND_HEAVY_DAMAGE"
+    --  "		COND_HEAR_DANGER"
+    --  "		COND_HEAR_MOVE_AWAY"
+    --  )
+
     SCHED_COMBINE_SIGNAL_SUPPRESS = 93,
     SCHED_COMBINE_ENTER_OVERWATCH = 94,
     SCHED_COMBINE_OVERWATCH = 95,
