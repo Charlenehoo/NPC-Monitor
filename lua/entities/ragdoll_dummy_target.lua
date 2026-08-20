@@ -14,9 +14,11 @@ if SERVER then
     local OFFSET = 50
     local MAX = 99
 
-    local MAX_INIT_DURATION = 0.15
-    local EXECUTIONER_REFRESH_INTERVAL = 15
-    local EXECUTIONER_SEARCH_INTERVAL = 1.5
+    local MAX_INIT_DURATION = 0.3
+    local EXECUTIONER_REFRESH_INTERVAL = 6.0
+    local EXECUTIONER_SEARCH_INTERVAL = 3.0
+    local EXECUTIONER_VALIDATE_INTERVAL = 1.0
+    local EXECUTIONER_MAX_FAIL_COUNT = 2
 
     local STATE_TO_SEARCH_RADIUS = {
         falling = 250,
@@ -75,6 +77,8 @@ if SERVER then
         self._CreateTime = CurTime()
         self._LastRefreshTime = CurTime()
         self._LastSearchTime = CurTime()
+        self._LastExecutionerCheckTime = CurTime()
+        self._ExecutionerFailCount = 0
         self._Executioner = nil
 
         self._PotentialExecutioners = {}
