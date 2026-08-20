@@ -7,6 +7,7 @@ if SERVER then
     local CONSTANTS = include("npc_monitor/constants.lua")
     local helpers = include("npc_monitor/helpers.lua")
     local findNearestEntity = helpers.findNearestEntity
+    local getEyePos = helpers.getEyePos
 
     local PROXY_MODEL = "models/editor/cube_small.mdl"
     local SCALE_1 = 0.03125 -- 1 / 32
@@ -14,7 +15,16 @@ if SERVER then
     local MAX = 99
 
     local MAX_INIT_DURATION = 0.15
-    local REFRESH_INTERVAL = 3
+    local EXECUTIONER_REFRESH_INTERVAL = 15
+    local EXECUTIONER_SEARCH_INTERVAL = 1.5
+
+    local STATE_TO_SEARCH_RADIUS = {
+        falling = 250,
+        writhing = 500,
+        crawling = 1000,
+        reviving = CONSTANTS.NPC_MAX_LOOK_DISTANCE
+
+    }
 
     function ENT:Initialize()
         self:SetModel(PROXY_MODEL)
@@ -64,6 +74,7 @@ if SERVER then
         self._Ragdoll = ragdoll
         self._CreateTime = CurTime()
         self._LastRefreshTime = CurTime()
+        self._LastSearchTime = CurTime()
         self._Executioner = nil
 
         self._PotentialExecutioners = {}
@@ -88,19 +99,7 @@ if SERVER then
     end
 
     function ENT:Think()
-        if table.IsEmpty(self._PotentialExecutioners) then
-            if CurTime() - self._CreateTime > MAX_INIT_DURATION then
-                self:Remove()
-                return
-            else
-                self:_TryRefreshPotentialExecutioners()
-            end
-        end
-
-        if CurTime() - self._LastRefreshTime > REFRESH_INTERVAL then
-            self._LastRefreshTime = CurTime()
-            self:_TryRefreshPotentialExecutioners()
-        end
+        local now = CurTime()
 
         local ragdoll = self._Ragdoll
         if not IsValid(ragdoll) then
@@ -109,47 +108,63 @@ if SERVER then
         end
 
         local ragdollState = getRagdollState(ragdoll)
-        local ragdollEyePos = helpers.getEyePos(ragdoll)
-
-        if not self._Executioner then
-            local searchRadius
-            if ragdollState == "init" then
-                if CurTime() - self._CreateTime > MAX_INIT_DURATION then
-                    self:Remove()
-                    return
-                end
-            elseif ragdollState == "dead" then
+        if ragdollState == "init" then
+            if CurTime() - self._CreateTime > MAX_INIT_DURATION then
                 self:Remove()
                 return
-            elseif ragdollState == "falling" then
-            elseif ragdollState == "writhing" then
-                searchRadius = 500
-            elseif ragdollState == "crawling" then
-                searchRadius = 1000
-            elseif ragdollState == "reviving" then
-                searchRadius = CONSTANTS.NPC_MAX_LOOK_DISTANCE
             end
+        elseif ragdollState == "dead" then
+            self:Remove()
+            return
+        end
 
-            if searchRadius then
-                self._Executioner = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
-                    function(npc)
-                        if not IsValid(npc) then return false end
-                        if not npc:TestPVS(ragdollEyePos) then return false end
-                        if not npc:IsInViewCone(ragdollEyePos) then return false end
-                        if not npc:IsLineOfSightClear(ragdollEyePos) then return false end
-                        return true
-                    end)
-            end
+        local ragdollEyePos = helpers.getEyePos(ragdoll)
+
+        local function canBeExecutedBy(npc)
+            if not IsValid(npc) then return false end
+            if not npc:TestPVS(ragdollEyePos) then return false end
+            if not npc:IsInViewCone(ragdollEyePos) then return false end
+            if not npc:IsLineOfSightClear(ragdollEyePos) then return false end
+            return true
         end
 
         if self._Executioner then
-            local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (shootPos - ragdollEyePos):Normalize() -- from ragdollEyePos point to shootPos
+            if canBeExecutedBy(self._Executioner) then
+                local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
+                local dir = (shootPos - ragdollEyePos):Normalize() -- from ragdollEyePos point to shootPos
 
-            self:SetPos(ragdollEyePos + dir * OFFSET)
-            self:SetAngles(dir:Angle())
-        else
-            self:SetPos(ragdollEyePos)
+                self:SetPos(ragdollEyePos + dir * OFFSET)
+                self:SetAngles(dir:Angle())
+
+                return -- happy path early return
+            else
+                if IsValid(self._Executioner) then
+                    self._Executioner:AddEntityRelationship(self, D_NU, MAX)
+                end
+                self._Executioner = nil
+            end
+        end
+
+        -- not self._Executioner
+        if now - self._LastRefreshTime > EXECUTIONER_REFRESH_INTERVAL then
+            self._LastRefreshTime = now
+
+            self:_TryRefreshPotentialExecutioners()
+            if table.IsEmpty(self._PotentialExecutioners) then
+                self:Remove()
+                return
+            end
+        end
+
+        if now - self._LastSearchTime > EXECUTIONER_SEARCH_INTERVAL then
+            self._LastSearchTime = now
+
+            local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
+            if searchRadius then
+                self._Executioner = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
+                    canBeExecutedBy)
+                self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
+            end
         end
     end
 end
