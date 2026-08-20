@@ -118,4 +118,61 @@ function M.findNearestPlayer(pos, maxDist)
     end)
 end
 
+function M.getEyePos(ent)
+    if ent._GetEyePosStrategyCache then
+        local s = ent._GetEyePosStrategyCache
+
+        if s == "Attachment" then
+            local attach = ent:GetAttachment(ent._GetEyePosIDCache)
+            if attach and attach.Pos then
+                return attach.Pos
+            end
+            ent._GetEyePosStrategyCache = nil
+        elseif s == "Bone" then
+            local pos = ent:GetBonePosition(ent._GetEyePosIDCache)
+            if pos then
+                return pos
+            end
+            ent._GetEyePosStrategyCache = nil
+        elseif s == "EyePos" then
+            local pos = ent:EyePos()
+            if pos then
+                return pos
+            end
+            ent._GetEyePosStrategyCache = nil
+        elseif s == "Pos" then
+            return ent:GetPos()
+        end
+    end
+
+    local eyesID = ent:LookupAttachment("eyes")
+    if eyesID and eyesID ~= 0 and eyesID ~= -1 then
+        local attach = ent:GetAttachment(eyesID)
+        if attach and attach.Pos then
+            ent._GetEyePosStrategyCache = "Attachment"
+            ent._GetEyePosIDCache = eyesID
+            return attach.Pos
+        end
+    end
+
+    local headID = ent:LookupBone("ValveBiped.Bip01_Head1")
+    if headID then
+        local headPos = ent:GetBonePosition(headID)
+        if headPos then
+            ent._GetEyePosStrategyCache = "Bone"
+            ent._GetEyePosIDCache = headID
+            return headPos
+        end
+    end
+
+    local eyePos = ent:EyePos()
+    if eyePos then
+        ent._GetEyePosStrategyCache = "EyePos"
+        return eyePos
+    end
+
+    ent._GetEyePosStrategyCache = "Pos"
+    return ent:GetPos()
+end
+
 return M
