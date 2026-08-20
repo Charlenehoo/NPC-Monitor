@@ -43,6 +43,13 @@ addUniqueHook("InitPostEntity", function()
     end
 end)
 
+addUniqueHook("CreateEntityRagdoll", function(owner, ragdoll)
+    if not IsValid(owner) or not IsValid(ragdoll) then return end
+    local dummy = ents.Create(CONSTANTS.RAGADOLL_DUMMY_CLASS)
+    dummy:Spawn()
+    dummy:Init(owner, ragdoll)
+end)
+
 addUniqueHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
     if entity:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then

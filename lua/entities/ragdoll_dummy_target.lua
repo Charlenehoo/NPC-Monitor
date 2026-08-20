@@ -136,6 +136,10 @@ function ENT:Think()
                 if self._ExecutionerFailCount >= EXECUTIONER_MAX_FAIL_COUNT then
                     if IsValid(self._Executioner) then
                         self._Executioner:AddEntityRelationship(self, D_NU, MAX)
+                        if self._Executioner:GetEnemy() == self then
+                            self._Executioner:ClearEnemyMemory()
+                            self._Executioner:SetEnemy(NULL)
+                        end
                     end
                     self._Executioner = nil
                     self._ExecutionerFailCount = 0
