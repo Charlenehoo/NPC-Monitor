@@ -1,5 +1,5 @@
 local CONSTANTS = include("npc_monitor/constants.lua")
-local Enum      = include("enum.lua")
+local Enum      = include("npc_monitor/enum.lua")
 local log       = include("npc_monitor/log.lua")
 local helpers   = include("npc_monitor/helpers.lua")
 
