@@ -5,6 +5,8 @@ ENT.Type = "ai"
 
 if SERVER then
     local CONSTANTS = include("npc_monitor/constants.lua")
+    local helpers = include("npc_monitor/helpers.lua")
+    local findNearestEntity = helpers.findNearestEntity
 
     local PROXY_MODEL = "models/editor/cube_small.mdl"
     local SCALE_1 = 0.03125 -- 1 / 32
@@ -12,7 +14,7 @@ if SERVER then
     local MAX = 99
 
     local MAX_INIT_DURATION = 0.15
-    local REFRESH_INTERVEL = 3
+    local REFRESH_INTERVAL = 3
 
     function ENT:Initialize()
         self:SetModel(PROXY_MODEL)
@@ -44,10 +46,15 @@ if SERVER then
 
     function ENT:Init(owner, ragdoll)
         if not IsValid(owner) then return end
+        if not IsValid(ragdoll) then return end
+
         self._Owner = owner
         self._Ragdoll = ragdoll
         self._CreateTime = CurTime()
         self._LastRefreshTime = CurTime()
+        self._Executioner = nil
+
+        self._PotentialExecutioners = {}
         self:_TryRefreshPotentialExecutioners()
     end
 
@@ -68,12 +75,9 @@ if SERVER then
         end
     end
 
-    local helpers = include("npc_monitor/helpers.lua")
-    local findNearestEntity = helpers.findNearestEntity
-
     function ENT:Think()
         if table.IsEmpty(self._PotentialExecutioners) then
-            if CurTime() - self._CreateTime > REFRESH_INTERVEL then
+            if CurTime() - self._CreateTime > MAX_INIT_DURATION then
                 self:Remove()
                 return
             else
@@ -81,7 +85,7 @@ if SERVER then
             end
         end
 
-        if CurTime() - self._LastRefreshTime > MAX_INIT_DURATION then
+        if CurTime() - self._LastRefreshTime > REFRESH_INTERVAL then
             self._LastRefreshTime = CurTime()
             self:_TryRefreshPotentialExecutioners()
         end
@@ -113,14 +117,17 @@ if SERVER then
             elseif ragdollState == "reviving" then
                 searchRadius = CONSTANTS.NPC_MAX_LOOK_DISTANCE
             end
-            self._Executioner = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
-                function(npc)
-                    if not IsValid(npc) then return false end
-                    if not npc:TestPVS(ragdollEyePos) then return false end
-                    if not npc:IsInViewCone(ragdollEyePos) then return false end
-                    if not npc:IsLineOfSightClear(ragdollEyePos) then return false end
-                    return true
-                end)
+
+            if searchRadius then
+                self._Executioner = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
+                    function(npc)
+                        if not IsValid(npc) then return false end
+                        if not npc:TestPVS(ragdollEyePos) then return false end
+                        if not npc:IsInViewCone(ragdollEyePos) then return false end
+                        if not npc:IsLineOfSightClear(ragdollEyePos) then return false end
+                        return true
+                    end)
+            end
         end
 
         if self._Executioner then
@@ -129,6 +136,8 @@ if SERVER then
 
             self:SetPos(ragdollEyePos + dir * OFFSET)
             self:SetAngles(dir:Angle())
+        else
+            self:SetPos(ragdollEyePos)
         end
     end
 end
