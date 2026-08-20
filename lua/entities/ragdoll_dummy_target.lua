@@ -1,4 +1,4 @@
--- AddCSLuaFile()
+AddCSLuaFile()
 
 ENT.Base = "base_ai"
 ENT.Type = "ai"
@@ -21,6 +21,7 @@ local MAX_INIT_DURATION = 0.3
 local EXECUTIONER_SEARCH_INTERVAL = 0.3
 local EXECUTIONER_VALIDATE_INTERVAL = 0.3
 local EXECUTIONER_MAX_FAIL_COUNT = 2
+local EXECUTIONER_TIMEOUT = 3.0
 
 local STATE_TO_SEARCH_RADIUS = {
     init = nil,
@@ -37,7 +38,7 @@ function ENT:Initialize()
     self:SetNPCClass(CLASS_NONE)
     self:SetSolid(SOLID_NONE)
     self:SetCollisionGroup(COLLISION_GROUP_NONE)
-    -- self:SetNoDraw(true)
+    self:SetNoDraw(true)
 end
 
 function ENT:_TryRefreshPotentialExecutioners()
@@ -85,6 +86,7 @@ function ENT:Init(owner, ragdoll)
     self._LastExecutionerCheckTime = now - 1
     self._ExecutionerFailCount = 0
     self._Executioner = nil
+    self._ExecutionerAssignedTime = nil
 
     self._PotentialExecutioners = {}
     self:_TryRefreshPotentialExecutioners()
@@ -135,6 +137,20 @@ function ENT:_GetRagdollState(ragdoll)
     return stateName
 end
 
+function ENT._CancelExecutioner(exec)
+    if IsValid(exec) then
+        exec:AddEntityRelationship(self, D_NU, MAX)
+        if exec:GetEnemy() == self then
+            exec:ClearEnemyMemory()
+            exec:SetEnemy(NULL)
+        end
+    end
+    self._Executioner = nil
+    self._ExecutionerFailCount = 0
+    self._ExecutionerAssignedTime = nil
+    self._LastSearchTime = 0
+end
+
 function ENT:Think()
     local now = CurTime()
 
@@ -164,21 +180,17 @@ function ENT:Think()
         if now - self._LastExecutionerCheckTime > EXECUTIONER_VALIDATE_INTERVAL then
             self._LastExecutionerCheckTime = now
 
-            if canBeExecutedBy(self._Executioner) then
+            local exec = self._Executioner
+            if canBeExecutedBy(exec) then
                 self._ExecutionerFailCount = 0
+
+                if now - self._ExecutionerAssignedTime > EXECUTIONER_TIMEOUT then
+                    self._CancelExecutioner(exec)
+                end
             else
-                self._ExecutionerFailCount = (self._ExecutionerFailCount or 0) + 1
+                self._ExecutionerFailCount = self._ExecutionerFailCount + 1
                 if self._ExecutionerFailCount >= EXECUTIONER_MAX_FAIL_COUNT then
-                    if IsValid(self._Executioner) then
-                        self._Executioner:AddEntityRelationship(self, D_NU, MAX)
-                        if self._Executioner:GetEnemy() == self then
-                            self._Executioner:ClearEnemyMemory()
-                            self._Executioner:SetEnemy(NULL)
-                        end
-                    end
-                    self._Executioner = nil
-                    self._ExecutionerFailCount = 0
-                    self._LastSearchTime = 0
+                    self._CancelExecutioner(exec)
                 end
             end
         end
@@ -212,6 +224,7 @@ function ENT:Think()
                 canBeExecutedBy)
             if IsValid(nearest) then
                 self._Executioner = nearest
+                self._ExecutionerAssignedTime = CurTime()
                 self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
             end
         end
