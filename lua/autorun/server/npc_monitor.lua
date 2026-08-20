@@ -65,19 +65,19 @@ addUniqueHook("EntityRemoved", function(ent, _)
 end)
 
 addUniqueHook("Tick", function()
-    for name, id in pairs(COND) do
-        local lastConditions = allLastConditions[name] -- { npc -> has }
-        for npc in pairs(activeNPCS) do
-            if not IsValid(npc) then continue end
+    -- for name, id in pairs(COND) do
+    --     local lastConditions = allLastConditions[name] -- { npc -> has }
+    --     for npc in pairs(activeNPCS) do
+    --         if not IsValid(npc) then continue end
 
-            local lastCondition = lastConditions[npc]
-            local currentCondition = npc:HasCondition(id)
-            if lastCondition ~= currentCondition then
-                hook.Run("OnCondition", npc, name, id, lastCondition, currentCondition)
-                lastConditions[npc] = currentCondition
-            end
-        end
-    end
+    --         local lastCondition = lastConditions[npc]
+    --         local currentCondition = npc:HasCondition(id)
+    --         if lastCondition ~= currentCondition then
+    --             hook.Run("OnCondition", npc, name, id, lastCondition, currentCondition)
+    --             lastConditions[npc] = currentCondition
+    --         end
+    --     end
+    -- end
 
     for npc in pairs(activeNPCS) do
         if not IsValid(npc) then continue end

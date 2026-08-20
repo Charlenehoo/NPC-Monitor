@@ -24,9 +24,9 @@ local EXECUTIONER_MAX_FAIL_COUNT = 2
 
 local STATE_TO_SEARCH_RADIUS = {
     init = nil,
-    falling = 250,
-    writhing = 500,
-    crawling = 1000,
+    falling = 500,
+    writhing = 1000,
+    crawling = 2000,
     reviving = CONSTANTS.NPC_MAX_LOOK_DISTANCE,
     dead = nil,
 }
@@ -90,21 +90,31 @@ function ENT:Init(owner, ragdoll)
     self:_TryRefreshPotentialExecutioners()
 end
 
-local function getRagdollState(ragdoll)
+function ENT:_GetRagdollState(ragdoll)
     local thirdPartyMODState = ragdoll:GetNW2Int("Animation_State", -1)
+    local stateName
+
     if thirdPartyMODState == 0 then
-        return "dead"
+        stateName = "dead"
     elseif thirdPartyMODState == 1 then
-        return "falling"
+        stateName = "falling"
     elseif thirdPartyMODState == 2 then
-        return "writhing"
+        stateName = "writhing"
     elseif thirdPartyMODState == 3 then
-        return "crawling"
+        stateName = "crawling"
     elseif thirdPartyMODState == 4 then
-        return "reviving"
+        stateName = "reviving"
     else
-        return "init"
+        stateName = "init"
     end
+
+    local lastState = self._LastRagdollState
+    if lastState ~= stateName then
+        log.debug(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
+        self._LastRagdollState = stateName
+    end
+
+    return stateName
 end
 
 function ENT:Think()
@@ -116,7 +126,13 @@ function ENT:Think()
         return
     end
 
-    local ragdollEyePos = helpers.getEyePos(ragdoll)
+    local ragdollState = self:_GetRagdollState(ragdoll)
+    if ragdollState == "dead" then
+        self:Remove()
+        return
+    end
+
+    local ragdollEyePos = getEyePos(ragdoll)
 
     local function canBeExecutedBy(npc)
         if not IsValid(npc) then return false end
@@ -161,15 +177,9 @@ function ENT:Think()
     if now - self._LastSearchTime > EXECUTIONER_SEARCH_INTERVAL then
         self._LastSearchTime = now
 
-        local ragdollState = getRagdollState(ragdoll)
-        local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
-        if ragdollState == "init" or ragdollState == "dead" then
+        if ragdollState == "init" then
             self:Remove()
             return
-        else
-            if searchRadius then
-                sound.EmitHint(SOUND_PLAYER, ragdollEyePos, searchRadius, EXECUTIONER_SEARCH_INTERVAL, self)
-            end
         end
 
         self:_TryRefreshPotentialExecutioners()
@@ -178,7 +188,11 @@ function ENT:Think()
             return
         end
 
+        local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
         if searchRadius then
+            sound.EmitHint(CONSTANTS.SOUND_RAGDOLL, ragdollEyePos, searchRadius, EXECUTIONER_SEARCH_INTERVAL,
+                self)
+
             local nearest = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
                 canBeExecutedBy)
             if IsValid(nearest) then
