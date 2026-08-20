@@ -142,7 +142,8 @@ function ENT:_GetRagdollState(ragdoll)
     return stateName
 end
 
-function ENT._CancelExecutioner(exec)
+function ENT:_CancelExecutioner()
+    local exec = self._Executioner
     if IsValid(exec) then
         exec:AddEntityRelationship(self, D_NU, MAX)
         if exec:GetEnemy() == self then
@@ -190,12 +191,12 @@ function ENT:Think()
                 self._ExecutionerFailCount = 0
 
                 if now - self._ExecutionerAssignedTime > EXECUTIONER_TIMEOUT then
-                    self._CancelExecutioner(exec)
+                    self:_CancelExecutioner()
                 end
             else
                 self._ExecutionerFailCount = self._ExecutionerFailCount + 1
                 if self._ExecutionerFailCount >= EXECUTIONER_MAX_FAIL_COUNT then
-                    self._CancelExecutioner(exec)
+                    self:_CancelExecutioner()
                 end
             end
         end
