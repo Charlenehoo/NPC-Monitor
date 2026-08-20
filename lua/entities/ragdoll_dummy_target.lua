@@ -128,7 +128,7 @@ if SERVER then
             return true
         end
 
-        if self._Executioner then
+        if IsValid(self._Executioner) then
             if canBeExecutedBy(self._Executioner) then
                 local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
                 local dir = (shootPos - ragdollEyePos):Normalize() -- from ragdollEyePos point to shootPos
@@ -138,9 +138,7 @@ if SERVER then
 
                 return -- happy path early return
             else
-                if IsValid(self._Executioner) then
-                    self._Executioner:AddEntityRelationship(self, D_NU, MAX)
-                end
+                self._Executioner:AddEntityRelationship(self, D_NU, MAX)
                 self._Executioner = nil
             end
         end
@@ -161,9 +159,12 @@ if SERVER then
 
             local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
             if searchRadius then
-                self._Executioner = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
+                local nearest = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
                     canBeExecutedBy)
-                self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
+                if IsValid(nearest) then
+                    self._Executioner = nearest
+                    self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
+                end
             end
         end
     end
