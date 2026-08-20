@@ -1,8 +1,34 @@
 local function idleHandler(npc, lastSchedule, currentSchedule)
+    local dummyOfChoice
+
+    NPCMonitor.ForEachActiveDummy(function(dummy)
+        if IsValid(dummy) then
+            dummyOfChoice = dummy
+            return
+        end
+    end)
+    if dummyOfChoice then
+        npc:SetTarget(dummyOfChoice)
+        return SCHED_TARGET_CHASE
+    end
+
     return nil
 end
 
 local function alertHandler(npc, lastSchedule, currentSchedule)
+    local dummyOfChoice
+
+    NPCMonitor.ForEachActiveDummy(function(dummy)
+        if IsValid(dummy) then
+            dummyOfChoice = dummy
+            return
+        end
+    end)
+    if dummyOfChoice then
+        npc:SetTarget(dummyOfChoice)
+        return SCHED_TARGET_CHASE
+    end
+
     return nil
 end
 

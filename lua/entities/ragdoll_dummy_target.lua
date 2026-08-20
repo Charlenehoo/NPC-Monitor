@@ -18,15 +18,15 @@ local MAX = 99
 
 local MAX_INIT_DURATION = 0.3
 -- local EXECUTIONER_REFRESH_INTERVAL = 6.0
-local EXECUTIONER_SEARCH_INTERVAL = 3.0
-local EXECUTIONER_VALIDATE_INTERVAL = 1.0
+local EXECUTIONER_SEARCH_INTERVAL = 0.3
+local EXECUTIONER_VALIDATE_INTERVAL = 0.3
 local EXECUTIONER_MAX_FAIL_COUNT = 2
 
 local STATE_TO_SEARCH_RADIUS = {
     init = nil,
-    falling = 500,
-    writhing = 1000,
-    crawling = 2000,
+    falling = 200,
+    writhing = 100,
+    crawling = 400,
     reviving = CONSTANTS.NPC_MAX_LOOK_DISTANCE,
     dead = nil,
 }
@@ -37,7 +37,7 @@ function ENT:Initialize()
     self:SetNPCClass(CLASS_NONE)
     self:SetSolid(SOLID_NONE)
     self:SetCollisionGroup(COLLISION_GROUP_NONE)
-    self:SetNoDraw(true)
+    -- self:SetNoDraw(true)
 end
 
 function ENT:_TryRefreshPotentialExecutioners()
@@ -108,6 +108,24 @@ function ENT:_GetRagdollState(ragdoll)
         stateName = "init"
     end
 
+    -- thirdPartyMODState is not that accurate, so fix it with raw data
+    local hp_c = ragdoll.Hp_c
+    local hp_d = ragdoll.Hp_d
+    if stateName == "falling" then
+        if hp_c ~= nil and hp_c > 0 and (hp_d == nil or hp_d > 0) then
+            if ragdoll.IsWrithing or ragdoll.IsTwitching then
+                stateName = "writhing"
+            elseif ragdoll.IsReviving then
+                stateName = "reviving"
+            else
+                stateName = "crawling"
+            end
+        end
+    end
+    if (hp_c ~= nil and hp_c <= -100) or (hp_d ~= nil and hp_d <= -100) then
+        stateName = "dead"
+    end
+
     local lastState = self._LastRagdollState
     if lastState ~= stateName then
         log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
@@ -167,9 +185,9 @@ function ENT:Think()
 
         if IsValid(self._Executioner) then
             local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (shootPos - ragdollEyePos):GetNormalized()
-            self:SetPos(ragdollEyePos + dir * OFFSET)
-            self:SetAngles(dir:Angle())
+            local dir = (ragdollEyePos - shootPos):GetNormalized()
+            self:SetPos(shootPos + dir * OFFSET)
+            self:SetAngles(dir:GetNegated():Angle())
             return
         end
     end
@@ -190,9 +208,6 @@ function ENT:Think()
 
         local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
         if searchRadius then
-            sound.EmitHint(CONSTANTS.SOUND_RAGDOLL, ragdollEyePos, searchRadius, EXECUTIONER_SEARCH_INTERVAL,
-                self)
-
             local nearest = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
                 canBeExecutedBy)
             if IsValid(nearest) then
@@ -201,4 +216,6 @@ function ENT:Think()
             end
         end
     end
+
+    self:SetPos(ragdollEyePos + Vector(math.random() * 50, math.random() * 50, math.random() * 25))
 end
