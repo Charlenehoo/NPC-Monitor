@@ -4,7 +4,8 @@ local log       = include("npc_monitor/logging/log.lua")
 local helpers   = include("npc_monitor/helpers.lua")
 
 local function idleHandler(npc, lastSchedule, currentSchedule)
-    if lastSchedule == SCHED_ALERT_STAND then
+    if lastSchedule == SCHED_ALERT_STAND or
+        currentSchedule == SCHED_ALERT_STAND then
         local dummyOfChoice
 
         NPCMonitor.ForEachActiveDummy(function(dummy)
@@ -24,7 +25,8 @@ local function idleHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function alertHandler(npc, lastSchedule, currentSchedule)
-    if lastSchedule == SCHED_ALERT_STAND then
+    if lastSchedule == SCHED_ALERT_STAND or
+        currentSchedule == SCHED_ALERT_STAND then
         local dummyOfChoice
 
         NPCMonitor.ForEachActiveDummy(function(dummy)
