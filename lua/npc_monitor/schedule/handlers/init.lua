@@ -4,6 +4,10 @@
 -- 初始化注册表（挂到全局 NPCMonitor 上）
 NPCMonitor.ScheduleHandlers = NPCMonitor.ScheduleHandlers or {}
 
+function NPCMonitor.RegisterScheduleHandler(class, handler)
+    NPCMonitor.ScheduleHandlers[class] = handler
+end
+
 -- 逐个 include 具体 handler，这些文件内部会调用 RegisterScheduleHandler 注册自己
 include("npc_monitor/schedule/handlers/npc_combine_s.lua")
 

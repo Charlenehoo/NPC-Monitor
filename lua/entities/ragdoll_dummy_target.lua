@@ -5,32 +5,25 @@ ENT.Type = "ai"
 
 if CLIENT then return end
 
-local CONSTANTS = include("npc_monitor/constants.lua")
-local log = include("npc_monitor/log.lua")
-local helpers = include("npc_monitor/helpers.lua")
-local findNearestEntity = helpers.findNearestEntity
-local getEyePos = helpers.getEyePos
+local CONSTANTS                     = include("npc_monitor/config/constants.lua")
+local log                           = include("npc_monitor/logging/log.lua")
+local helpers                       = include("npc_monitor/helpers.lua")
+local findNearestEntity             = helpers.findNearestEntity
+local getEyePos                     = helpers.getEyePos
 
-local PROXY_MODEL = "models/editor/cube_small.mdl"
-local SCALE_1 = 0.03125 -- 1 / 32
-local OFFSET = 50
-local MAX = 99
+local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
+local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE
+local OFFSET                        = CONSTANTS.RAGDOLL_DUMMY.OFFSET
+local MAX                           = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
 
-local MAX_INIT_DURATION = 0.3
--- local EXECUTIONER_REFRESH_INTERVAL = 6.0
-local EXECUTIONER_SEARCH_INTERVAL = 0.3
-local EXECUTIONER_VALIDATE_INTERVAL = 0.3
-local EXECUTIONER_MAX_FAIL_COUNT = 2
-local EXECUTIONER_TIMEOUT = 3.0
+local MAX_INIT_DURATION             = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
+-- local EXECUTIONER_REFRESH_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_REFRESH_INTERVAL
+local EXECUTIONER_SEARCH_INTERVAL   = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_SEARCH_INTERVAL
+local EXECUTIONER_VALIDATE_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_VALIDATE_INTERVAL
+local EXECUTIONER_MAX_FAIL_COUNT    = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_MAX_FAIL_COUNT
+local EXECUTIONER_TIMEOUT           = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_TIMEOUT
 
-local STATE_TO_SEARCH_RADIUS = {
-    init = nil,
-    falling = 200,
-    writhing = 100,
-    crawling = 400,
-    reviving = CONSTANTS.NPC_MAX_LOOK_DISTANCE,
-    dead = nil,
-}
+local STATE_TO_SEARCH_RADIUS        = CONSTANTS.RAGDOLL_DUMMY.STATE_TO_SEARCH_RADIUS
 
 function ENT:Initialize()
     self:SetModel(PROXY_MODEL)

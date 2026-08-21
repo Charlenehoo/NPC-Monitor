@@ -66,4 +66,4 @@ local function handler(npc, lastSchedule, currentSchedule)
     end
 end
 
-return handler
+NPCMonitor.RegisterScheduleHandler("npc_combine_s", handler)
