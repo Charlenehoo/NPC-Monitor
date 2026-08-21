@@ -11,16 +11,16 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
     if currentSchedule == SCHED_ALERT_STAND or
         currentSchedule == SCHED_ALERT_FACE_BESTSOUND or
         currentSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_PATROL then
-        local dummyOfChoice
+        local candidates = {}
 
         NPCMonitor.ForEachActiveDummy(function(dummy)
-            if IsValid(dummy) then
-                dummyOfChoice = dummy
-                return true
+            if IsValid(dummy) and dummy:IsPotentialExecutioner(npc) then
+                table.insert(candidates, dummy)
             end
         end)
 
-        if dummyOfChoice then
+        if #candidates > 0 then
+            local dummyOfChoice = candidates[math.random(#candidates)]
             npc:SetTarget(dummyOfChoice)
             return SCHED_TARGET_CHASE
         end
@@ -29,19 +29,36 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
     return nil
 end
 
-local function combatHandler(npc, lastSchedule, currentSchedule)
-    if currentSchedule ~= SCHED_RELOAD and
-        currentSchedule ~= Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD then
-        if npc:HasCondition(COND.ENEMY_OCCLUDED) then
-            return SCHED_SHOOT_ENEMY_COVER
-        end
+local SHOOT_COVER_MAX_DURATION = 3.0 -- 可移到 constants.lua 中
 
-        if lastSchedule == SCHED_SHOOT_ENEMY_COVER and
-            not npc:HasCondition(COND.LOST_ENEMY) then
+local function combatHandler(npc, lastSchedule, currentSchedule)
+    if currentSchedule == SCHED_RELOAD or
+        currentSchedule == SCHED_HIDE_AND_RELOAD or
+        currentSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD then
+        return nil
+    end
+
+    -- 保持掩体压制，但限制最大持续时间
+    if lastSchedule == SCHED_SHOOT_ENEMY_COVER then
+        local startTime = npc._shootCoverStartTime
+        if startTime and (CurTime() - startTime) < SHOOT_COVER_MAX_DURATION then
             return SCHED_SHOOT_ENEMY_COVER
+        else
+            npc._shootCoverStartTime = nil -- 超时，清理状态
+            return nil
         end
     end
 
+    -- 触发进入掩体压制
+    if npc:HasCondition(COND.ENEMY_OCCLUDED) then
+        if lastSchedule ~= SCHED_SHOOT_ENEMY_COVER then
+            npc._shootCoverStartTime = CurTime() -- 直接挂载在 NPC 实体上
+        end
+        return SCHED_SHOOT_ENEMY_COVER
+    end
+
+    -- 其他情况（离开掩体压制且无遮挡）清理状态
+    npc._shootCoverStartTime = nil
     return nil
 end
 

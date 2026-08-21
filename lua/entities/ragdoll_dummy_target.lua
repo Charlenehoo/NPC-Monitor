@@ -72,6 +72,18 @@ function ENT:_TryRefreshPotentialExecutioners()
     end
 end
 
+function ENT:IsPotentialExecutioner(npc)
+    if not IsValid(npc) then return false end
+
+    local potentials = self._PotentialExecutioners or {}
+    for _, p in ipairs(potentials) do
+        if p == npc then
+            return true
+        end
+    end
+    return false
+end
+
 function ENT:_TryReposition(activePos)
     local offset = Vector(
         math.random(-REPOSITION_OFFSET_RANGE.x, REPOSITION_OFFSET_RANGE.x),

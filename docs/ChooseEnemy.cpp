@@ -1,4 +1,3 @@
-```cpp
 bool CAI_BaseNPC::ChooseEnemy( void )
 {
 	AI_PROFILE_SCOPE(CAI_Enemies_ChooseEnemy);
@@ -142,4 +141,3 @@ bool CAI_BaseNPC::ChooseEnemy( void )
 
 	return ( pChosenEnemy != NULL );
 }
-```
