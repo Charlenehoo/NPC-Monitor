@@ -22,6 +22,11 @@ local function getState(npc)
     return state
 end
 
+-- Hook：实体移除时清理缓存
+addUniqueHook("EntityRemoved", function(ent, _)
+    stateByNPC[ent] = nil
+end)
+
 -- 核心调度控制函数（原逻辑基本不变）
 addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
@@ -50,7 +55,7 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
             -- 不匹配，我们设置的 schedule 被其他因素覆盖
             state.skipLast    = nil
             state.skipCurrent = nil
-            state.lastDesired = nil    -- 清除控制状态
+            state.lastDesired = nil -- 清除控制状态
         end
     end
 
