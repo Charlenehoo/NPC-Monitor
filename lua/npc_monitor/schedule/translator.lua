@@ -15,12 +15,6 @@ local stateByNPC     = setmetatable({}, { __mode = "k" })
 -- 弱键表：缓存每个 NPC 上一次的 schedule，供 TryControlNPC 主动调用时提供 lastSchedule
 local lastSchedules  = setmetatable({}, { __mode = "k" })
 
--- Hook：实体移除时清理缓存
-addUniqueHook("EntityRemoved", function(ent, _)
-    stateByNPC[ent]    = nil
-    lastSchedules[ent] = nil
-end)
-
 local function getState(npc)
     local state = stateByNPC[npc]
     if not state then
@@ -30,9 +24,15 @@ local function getState(npc)
     return state
 end
 
+-- Hook：实体移除时清理缓存
+addUniqueHook("EntityRemoved", function(ent, _)
+    stateByNPC[ent]    = nil
+    lastSchedules[ent] = nil
+end)
+
 -- 核心调度控制逻辑（供事件钩子和主动调用共用）
 -- @return desiredSchedule 如果执行了 SetSchedule 则返回目标 schedule，否则返回 nil
-local function overrideSchedule(npc, lastSchedule, currentSchedule)
+local function executeControl(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return nil end
 
     local state       = getState(npc)
@@ -90,21 +90,9 @@ local function overrideSchedule(npc, lastSchedule, currentSchedule)
     return nil
 end
 
--- 暴露主动控制接口：其他模块（如 dummy）可以调用此函数强制 NPC 重新评估调度
--- 使用场景：当 NPC 停留在某个 schedule（如 SCHED_ALERT_STAND）且 dummy 稍后才准备好时，
---          可以直接调用此函数让 NPC 重新决策，而不必等待自然的 schedule 变化事件。
-function NPCMonitor.SetSchedule(npc)
-    if not IsValid(npc) then return false end
-
-    local currentSchedule = npc:GetCurrentSchedule()
-    local lastSchedule    = lastSchedules[npc] or currentSchedule
-
-    return overrideSchedule(npc, lastSchedule, currentSchedule)
-end
-
 -- 订阅事件：正常 schedule 变化时触发
 addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
-    local result = overrideSchedule(npc, lastSchedule, currentSchedule)
+    local result = executeControl(npc, lastSchedule, currentSchedule)
 
     -- 更新自己的 lastSchedules 缓存，便于主动调用时提供 lastSchedule
     if IsValid(npc) then
@@ -113,3 +101,15 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
 
     return result
 end)
+
+-- 暴露主动控制接口：其他模块（如 dummy）可以调用此函数强制 NPC 重新评估调度
+-- 使用场景：当 NPC 停留在某个 schedule（如 SCHED_ALERT_STAND）且 dummy 稍后才准备好时，
+--          可以直接调用此函数让 NPC 重新决策，而不必等待自然的 schedule 变化事件。
+function NPCMonitor.TryControlNPC(npc)
+    if not IsValid(npc) then return false end
+
+    local currentSchedule = npc:GetCurrentSchedule()
+    local lastSchedule    = lastSchedules[npc] or currentSchedule
+
+    return executeControl(npc, lastSchedule, currentSchedule)
+end
