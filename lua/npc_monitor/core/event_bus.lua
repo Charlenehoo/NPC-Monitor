@@ -6,6 +6,7 @@ local CONSTANTS     = include("npc_monitor/config/constants.lua")
 local Events        = include("npc_monitor/core/events.lua")
 local log           = include("npc_monitor/logging/log.lua")
 local helpers       = include("npc_monitor/helpers.lua")
+local addUniqueHook = helpers.addUniqueHook
 
 -- 活跃实体集合（弱键，实体消失后自动清理）
 local activeNPCS    = setmetatable({}, { __mode = "k" })
@@ -73,7 +74,7 @@ function NPCMonitor.ForEachActiveDummy(callback)
 end
 
 -- Hook：服务器初始化后扫描已有实体
-hook.Add("InitPostEntity", "NPCMonitor.EventBus.InitPostEntity", function()
+addUniqueHook("InitPostEntity", function()
     for _, ent in ipairs(ents.GetAll()) do
         if not IsValid(ent) or not ent:IsNPC() then continue end
 
@@ -86,7 +87,7 @@ hook.Add("InitPostEntity", "NPCMonitor.EventBus.InitPostEntity", function()
 end)
 
 -- Hook：当玩家/实体死亡生成布娃娃时，创建对应的 dummy 目标
-hook.Add("CreateEntityRagdoll", "NPCMonitor.EventBus.CreateEntityRagdoll", function(owner, ragdoll)
+addUniqueHook("CreateEntityRagdoll", function(owner, ragdoll)
     if not IsValid(owner) or not IsValid(ragdoll) then return end
 
     local dummy = ents.Create(CONSTANTS.RAGADOLL_DUMMY_CLASS)
@@ -97,7 +98,7 @@ hook.Add("CreateEntityRagdoll", "NPCMonitor.EventBus.CreateEntityRagdoll", funct
 end)
 
 -- Hook：新实体创建时自动注册
-hook.Add("OnEntityCreated", "NPCMonitor.EventBus.OnEntityCreated", function(entity)
+addUniqueHook("OnEntityCreated", function(entity)
     if not IsValid(entity) or not entity:IsNPC() then return end
 
     if entity:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then
@@ -108,12 +109,12 @@ hook.Add("OnEntityCreated", "NPCMonitor.EventBus.OnEntityCreated", function(enti
 end)
 
 -- Hook：实体移除时清理缓存
-hook.Add("EntityRemoved", "NPCMonitor.EventBus.EntityRemoved", function(ent, _)
+addUniqueHook("EntityRemoved", function(ent, _)
     cleanupEntity(ent)
 end)
 
 -- Hook：每 Tick 轮询状态变化并发布事件
-hook.Add("Tick", "NPCMonitor.EventBus.Tick", function()
+addUniqueHook("Tick", function()
     -- 条件变化检测（可选功能，默认注释）
     -- for name, id in pairs(COND) do
     --     local lastConditions = allLastConditions[name] -- { npc -> has }
