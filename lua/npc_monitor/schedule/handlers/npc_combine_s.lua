@@ -1,6 +1,6 @@
-local CONSTANTS = include("npc_monitor/constants.lua")
-local Enum      = include("npc_monitor/enum.lua")
-local log       = include("npc_monitor/log.lua")
+local CONSTANTS = include("npc_monitor/config/constants.lua")
+local Enum      = include("npc_monitor/config/enum.lua")
+local log       = include("npc_monitor/logging/log.lua")
 local helpers   = include("npc_monitor/helpers.lua")
 
 local function idleHandler(npc, lastSchedule, currentSchedule)

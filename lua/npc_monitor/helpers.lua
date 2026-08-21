@@ -1,7 +1,7 @@
 -- npc_monitor/helpers.lua
 -- 通用辅助函数，供 NPC Monitor 各模块使用
-local CONSTANTS = include("npc_monitor/constants.lua")
-local Enum = include("enum.lua")
+local CONSTANTS = include("npc_monitor/config/constants.lua")
+local Enum = include("npc_monitor/config/enum.lua")
 
 local M = {}
 
