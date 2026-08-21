@@ -1,26 +1,21 @@
-local CONSTANTS             = include("npc_monitor/constants.lua")
-local log                   = include("npc_monitor/log.lua")
-local helpers               = include("npc_monitor/helpers.lua")
-local addUniqueHook         = helpers.addUniqueHook
+-- npc_monitor/schedule/translator.lua
+-- 订阅 TranslateSchedule 事件，执行调度控制逻辑
 
-local npc_combine_s         = include("npc_schedule_handler/npc_combine_s.lua")
+local CONSTANTS             = include("npc_monitor/config/constants.lua")
+local Events                = include("npc_monitor/core/events.lua")
+local log                   = include("npc_monitor/logging/log.lua")
+local helpers               = include("npc_monitor/helpers.lua")
+
+-- 如果需要直接调用 handler，可以 include 或通过选择器模块
+local selectSchedule        = include("npc_monitor/schedule/selector.lua")
 
 -- 字段名定义
 local SKIP_LAST_FLAG        = CONSTANTS.PLUGIN_NAME .. "_SkipNextLast"
 local SKIP_CURRENT_FLAG     = CONSTANTS.PLUGIN_NAME .. "_SkipNextCurrent"
 local LAST_DESIRED_SCHEDULE = CONSTANTS.PLUGIN_NAME .. "_LastDesiredSchedule"
 
-local function selectSchedule(npc, lastSchedule, currentSchedule)
-    local npcClass = npc:GetClass()
-    if not npcClass then return nil end
-
-    if npcClass == "npc_combine_s" then
-        return npc_combine_s(npc, lastSchedule, currentSchedule)
-    end
-    return nil
-end
-
-addUniqueHook("TranslateSchedule", function(npc, lastSchedule, currentSchedule)
+-- 核心调度控制函数（原逻辑基本不变）
+hook.Add(Events.TranslateSchedule, "NPCMonitor.ScheduleTranslator", function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
 
     local lastDesired = npc[LAST_DESIRED_SCHEDULE]

@@ -1,6 +1,7 @@
-local CONSTANTS = include("npc_monitor/constants.lua")
-local log = include("npc_monitor/log.lua")
-local helpers = include("npc_monitor/helpers.lua")
+-- npc_monitor/enhance/emit_sound_vox.lua
+local CONSTANTS     = include("npc_monitor/config/constants.lua")
+local log           = include("npc_monitor/logging/log.lua")
+local helpers       = include("npc_monitor/helpers.lua")
 local addUniqueHook = helpers.addUniqueHook
 
 addUniqueHook("InitPostEntity", function()

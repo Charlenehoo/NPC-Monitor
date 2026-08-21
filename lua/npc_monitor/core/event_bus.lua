@@ -1,8 +1,10 @@
 -- npc_monitor/core/event_bus.lua
 -- 核心事件总线：维护活跃 NPC/Dummy 集合，轮询状态变化并发布事件
 
+
 local CONSTANTS     = include("npc_monitor/config/constants.lua")
 local Events        = include("npc_monitor/core/events.lua")
+local log           = include("npc_monitor/logging/log.lua")
 local helpers       = include("npc_monitor/helpers.lua")
 
 -- 活跃实体集合（弱键，实体消失后自动清理）
@@ -10,9 +12,9 @@ local activeNPCS    = setmetatable({}, { __mode = "k" })
 local activeDummies = setmetatable({}, { __mode = "k" })
 
 -- 上次状态缓存（弱键，随实体一起回收）
-local lastSchedules = setmetatable({}, { __mode = "k" })   -- { npc -> schedule }
-local lastStates    = setmetatable({}, { __mode = "k" })   -- { npc -> state }
-local lastEnemies   = setmetatable({}, { __mode = "k" })   -- { npc -> enemy }
+local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
+local lastStates    = setmetatable({}, { __mode = "k" }) -- { npc -> state }
+local lastEnemies   = setmetatable({}, { __mode = "k" }) -- { npc -> enemy }
 
 -- 条件变化缓存（可选功能，默认不启用）
 -- local allLastConditions = {} -- { condition -> { npc -> has } }
