@@ -14,6 +14,12 @@ local SKIP_LAST_FLAG        = CONSTANTS.PLUGIN_NAME .. "_SkipNextLast"
 local SKIP_CURRENT_FLAG     = CONSTANTS.PLUGIN_NAME .. "_SkipNextCurrent"
 local LAST_DESIRED_SCHEDULE = CONSTANTS.PLUGIN_NAME .. "_LastDesiredSchedule"
 
+local function isFailureSchedule(sched)
+    return sched == SCHED_FAIL
+        or sched == SCHED_FAIL_NOSTOP
+    -- 根据需要添加其他失败类 schedule
+end
+
 -- 核心调度控制函数（原逻辑基本不变）
 hook.Add(Events.TranslateSchedule, "NPCMonitor.ScheduleTranslator", function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
