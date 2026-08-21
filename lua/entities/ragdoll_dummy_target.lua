@@ -30,6 +30,7 @@ local REPOSITION_OFFSET_RANGE       = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_OFFSET_
 
 -- 定期重置回最高优先级策略的时间间隔（秒）
 local POSITION_RESET_INTERVAL       = CONSTANTS.RAGDOLL_DUMMY.POSITION_RESET_INTERVAL
+local BROAD_CAST_INTERVAL           = 9
 
 function ENT:Initialize()
     self:SetModel(PROXY_MODEL)
@@ -108,6 +109,8 @@ function ENT:Init(owner, ragdoll)
     self._PositionStrategyIndex = 1
     self._PositionStrategyFailCount = 0
     self._LastPositionStrategyResetTime = now
+
+    self._LastBroadCastTime = now
 end
 
 function ENT:_GetActivePosition()
@@ -176,11 +179,15 @@ function ENT:_GetRagdollState(ragdoll)
     end
 
     -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
-    local JUST_FOR_SURE_OFFSET = -100
     if stateName == "dead" then
-        if not ((hp_c ~= nil and hp_c <= JUST_FOR_SURE_OFFSET) or (hp_d ~= nil and hp_d <= JUST_FOR_SURE_OFFSET)) then
+        if not ((hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0)) then
             stateName = "writhing"
         end
+    end
+
+    local JUST_FOR_SURE_OFFSET = -100
+    if (hp_c ~= nil and hp_c <= JUST_FOR_SURE_OFFSET) or (hp_d ~= nil and hp_d <= JUST_FOR_SURE_OFFSET) then
+        stateName = "dead"
     end
 
     local lastState = self._LastRagdollState
@@ -304,6 +311,13 @@ function ENT:Think()
                     -- 降级后等待下一搜索周期再尝试，避免同帧重复搜索
                 end
             end
+        end
+    end
+
+    if now - self._LastBroadCastTime > BROAD_CAST_INTERVAL then
+        self._LastBroadCastTime = now
+        for _, exec in ipairs(self._PotentialExecutioners) do
+            NPCMonitor.TryControlNPC(exec)
         end
     end
 
