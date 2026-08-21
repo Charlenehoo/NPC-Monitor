@@ -27,19 +27,19 @@ M.HEAR_NOISE_DISTANCE_FACTOR = 0.1
 
 -- 实体：ragdoll_dummy_target 配置
 M.RAGDOLL_DUMMY              = {
-    PROXY_MODEL                   = "models/editor/cube_small.mdl",
-    SCALE                         = 0.03125, -- 1 / 32
-    OFFSET                        = 50,
-    RELATIONSHIP_MAX_PRIORITY     = 99,
+    PROXY_MODEL                      = "models/editor/cube_small.mdl",
+    SCALE                            = 0.03125, -- 1 / 32
+    OFFSET                           = 50,
+    RELATIONSHIP_MAX_PRIORITY        = 99,
 
-    MAX_INIT_DURATION             = 0.3,
+    MAX_INIT_DURATION                = 0.3,
     -- EXECUTIONER_REFRESH_INTERVAL = 6.0,
-    EXECUTIONER_SEARCH_INTERVAL   = 0.3,
-    EXECUTIONER_VALIDATE_INTERVAL = 0.3,
-    EXECUTIONER_MAX_FAIL_COUNT    = 2,
-    EXECUTIONER_TIMEOUT           = 3.0,
+    EXECUTIONER_SEARCH_INTERVAL      = 0.3,
+    EXECUTIONER_VALIDATE_INTERVAL    = 0.3,
+    EXECUTIONER_MAX_FAIL_COUNT       = 2,
+    EXECUTIONER_TIMEOUT              = 3.0,
 
-    STATE_TO_SEARCH_RADIUS        = {
+    STATE_TO_SEARCH_RADIUS           = {
         init     = nil,
         falling  = 200,
         writhing = 100,
@@ -47,6 +47,13 @@ M.RAGDOLL_DUMMY              = {
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
+
+    REPOSITION_INTERVAL              = 1.0, -- 重新定位的最小间隔（秒）
+    REPOSITION_NAV_RADIUS            = 100, -- navmesh 搜索半径
+    REPOSITION_NAV_STEP_HEIGHT       = 32,  -- 允许上台阶高度
+    REPOSITION_NAV_DROP_HEIGHT       = 64,  -- 允许下落高度
+    REPOSITION_FALLBACK_RADIUS       = 80,  -- 后备偏移的基础半径
+    REPOSITION_FALLBACK_MAX_ATTEMPTS = 8,   -- 后备偏移最多尝试次数
 }
 
 return M

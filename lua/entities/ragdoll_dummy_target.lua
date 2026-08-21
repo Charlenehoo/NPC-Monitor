@@ -5,25 +5,32 @@ ENT.Type = "ai"
 
 if CLIENT then return end
 
-local CONSTANTS                     = include("npc_monitor/config/constants.lua")
-local log                           = include("npc_monitor/logging/log.lua")
-local helpers                       = include("npc_monitor/helpers.lua")
-local findNearestEntity             = helpers.findNearestEntity
-local getEyePos                     = helpers.getEyePos
+local CONSTANTS                        = include("npc_monitor/config/constants.lua")
+local log                              = include("npc_monitor/logging/log.lua")
+local helpers                          = include("npc_monitor/helpers.lua")
+local findNearestEntity                = helpers.findNearestEntity
+local getEyePos                        = helpers.getEyePos
 
-local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
-local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE
-local OFFSET                        = CONSTANTS.RAGDOLL_DUMMY.OFFSET
-local MAX                           = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
+local PROXY_MODEL                      = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
+local SCALE_1                          = CONSTANTS.RAGDOLL_DUMMY.SCALE
+local OFFSET                           = CONSTANTS.RAGDOLL_DUMMY.OFFSET
+local MAX                              = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
 
-local MAX_INIT_DURATION             = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
+local MAX_INIT_DURATION                = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
 -- local EXECUTIONER_REFRESH_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_REFRESH_INTERVAL
-local EXECUTIONER_SEARCH_INTERVAL   = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_SEARCH_INTERVAL
-local EXECUTIONER_VALIDATE_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_VALIDATE_INTERVAL
-local EXECUTIONER_MAX_FAIL_COUNT    = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_MAX_FAIL_COUNT
-local EXECUTIONER_TIMEOUT           = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_TIMEOUT
+local EXECUTIONER_SEARCH_INTERVAL      = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_SEARCH_INTERVAL
+local EXECUTIONER_VALIDATE_INTERVAL    = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_VALIDATE_INTERVAL
+local EXECUTIONER_MAX_FAIL_COUNT       = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_MAX_FAIL_COUNT
+local EXECUTIONER_TIMEOUT              = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_TIMEOUT
 
-local STATE_TO_SEARCH_RADIUS        = CONSTANTS.RAGDOLL_DUMMY.STATE_TO_SEARCH_RADIUS
+local STATE_TO_SEARCH_RADIUS           = CONSTANTS.RAGDOLL_DUMMY.STATE_TO_SEARCH_RADIUS
+
+local REPOSITION_INTERVAL              = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_INTERVAL
+local REPOSITION_NAV_RADIUS            = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_NAV_RADIUS
+local REPOSITION_NAV_STEP_HEIGHT       = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_NAV_STEP_HEIGHT
+local REPOSITION_NAV_DROP_HEIGHT       = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_NAV_DROP_HEIGHT
+local REPOSITION_FALLBACK_RADIUS       = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_FALLBACK_RADIUS
+local REPOSITION_FALLBACK_MAX_ATTEMPTS = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_FALLBACK_MAX_ATTEMPTS
 
 function ENT:Initialize()
     self:SetModel(PROXY_MODEL)
@@ -65,6 +72,45 @@ function ENT:_TryRefreshPotentialExecutioners()
     end
 end
 
+function ENT:_TryReposition(ragdollEyePos)
+    -- 1. 优先使用导航区域
+    local areas = navmesh.Find(ragdollEyePos, REPOSITION_NAV_RADIUS,
+        REPOSITION_NAV_STEP_HEIGHT, REPOSITION_NAV_DROP_HEIGHT)
+    if areas and #areas > 0 then
+        local area = areas[math.random(#areas)]
+        local newPos = nil
+
+        if area.GetRandomPoint then
+            newPos = area:GetRandomPoint()
+        end
+
+        if not newPos then
+            if area.GetCenter then
+                newPos = area:GetCenter()
+            elseif area.GetClosestPointOnArea then
+                newPos = area:GetClosestPointOnArea(ragdollEyePos)
+            end
+        end
+
+        if newPos then
+            self:SetPos(newPos)
+            return
+        end
+    end
+
+    -- 2. 后备：确定性螺旋偏移（角度随尝试次数增加）
+    local attempt = self._RepositionAttempt
+    local maxAttempts = REPOSITION_FALLBACK_MAX_ATTEMPTS
+
+    local angle = attempt * (2 * math.pi / math.max(maxAttempts, 1))
+    local radius = REPOSITION_FALLBACK_RADIUS
+    local offset = Vector(math.cos(angle) * radius, math.sin(angle) * radius, 0)
+
+    self:SetPos(ragdollEyePos + offset)
+
+    self._RepositionAttempt = (attempt + 1) % maxAttempts
+end
+
 function ENT:Init(owner, ragdoll)
     if not IsValid(owner) then return end
     if not IsValid(ragdoll) then return end
@@ -83,6 +129,9 @@ function ENT:Init(owner, ragdoll)
 
     self._PotentialExecutioners = {}
     self:_TryRefreshPotentialExecutioners()
+
+    self._LastRepositionTime = 0
+    self._RepositionAttempt = 0
 end
 
 function ENT:_GetRagdollState(ragdoll)
@@ -225,9 +274,12 @@ function ENT:Think()
                 self._Executioner = nearest
                 self._ExecutionerAssignedTime = CurTime()
                 self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
+            else
+                if now - self._LastRepositionTime > REPOSITION_INTERVAL then
+                    self._LastRepositionTime = now
+                    self:_TryReposition(ragdollEyePos)
+                end
             end
         end
     end
-
-    self:SetPos(ragdollEyePos + Vector(math.random() * 50, math.random() * 50, math.random() * 25))
 end
