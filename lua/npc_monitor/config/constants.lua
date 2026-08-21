@@ -48,11 +48,12 @@ M.RAGDOLL_DUMMY              = {
         dead     = nil,
     },
 
-    REPOSITION_INTERVAL              = 1.0, -- 重新定位的最小间隔（秒）
-    REPOSITION_NAV_RADIUS            = 100, -- navmesh 搜索半径
+    REPOSITION_INTERVAL              = 0.9, -- 重新定位的最小间隔（秒）
+    REPOSITION_NAV_RADIUS            = 160, -- navmesh 搜索半径
     REPOSITION_NAV_STEP_HEIGHT       = 32,  -- 允许上台阶高度
     REPOSITION_NAV_DROP_HEIGHT       = 64,  -- 允许下落高度
-    REPOSITION_FALLBACK_RADIUS       = 80,  -- 后备偏移的基础半径
+
+    REPOSITION_FALLBACK_RADIUS       = 160, -- 后备偏移的基础半径
     REPOSITION_FALLBACK_MAX_ATTEMPTS = 8,   -- 后备偏移最多尝试次数
 }
 
