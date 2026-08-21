@@ -5,6 +5,7 @@ local CONSTANTS             = include("npc_monitor/config/constants.lua")
 local Events                = include("npc_monitor/core/events.lua")
 local log                   = include("npc_monitor/logging/log.lua")
 local helpers               = include("npc_monitor/helpers.lua")
+local addUniqueHook         = helpers.addUniqueHook
 
 -- 如果需要直接调用 handler，可以 include 或通过选择器模块
 local selectSchedule        = include("npc_monitor/schedule/selector.lua")
@@ -21,7 +22,7 @@ local function isFailureSchedule(sched)
 end
 
 -- 核心调度控制函数（原逻辑基本不变）
-hook.Add(Events.TranslateSchedule, "NPCMonitor.ScheduleTranslator", function(npc, lastSchedule, currentSchedule)
+addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
 
     local lastDesired = npc[LAST_DESIRED_SCHEDULE]
