@@ -85,12 +85,37 @@ function ENT:IsPotentialExecutioner(npc)
 end
 
 function ENT:_TryReposition(activePos)
-    local offset = Vector(
-        math.random(-REPOSITION_OFFSET_RANGE.x, REPOSITION_OFFSET_RANGE.x),
-        math.random(-REPOSITION_OFFSET_RANGE.y, REPOSITION_OFFSET_RANGE.y),
-        math.random(-REPOSITION_OFFSET_RANGE.z, REPOSITION_OFFSET_RANGE.z)
-    )
-    self:SetPos(activePos + offset)
+    local ragdoll = self._Ragdoll
+    local filter = { self }
+    if IsValid(ragdoll) then
+        table.insert(filter, ragdoll)
+    end
+
+    local maxAttempts = 10
+
+    for _ = 1, maxAttempts do
+        local offset = Vector(
+            math.random(-REPOSITION_OFFSET_RANGE.x, REPOSITION_OFFSET_RANGE.x),
+            math.random(-REPOSITION_OFFSET_RANGE.y, REPOSITION_OFFSET_RANGE.y),
+            math.random(-REPOSITION_OFFSET_RANGE.z, REPOSITION_OFFSET_RANGE.z)
+        )
+        local candidatePos = activePos + offset
+
+        local tr = util.TraceLine({
+            start = activePos,
+            endpos = candidatePos,
+            filter = filter,
+            mask = MASK_SOLID
+        })
+
+        if not tr.Hit then
+            self:SetPos(candidatePos)
+            return
+        end
+    end
+
+    -- 没有找到可通过射线检查的随机点，退回到活动位置
+    self:SetPos(activePos)
 end
 
 function ENT:Init(owner, ragdoll)

@@ -63,6 +63,8 @@ local function combatHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function handler(npc, lastSchedule, currentSchedule)
+    if lastSchedule == SCHED_FAIL or currentSchedule == SCHED_FAIL then return nil end
+
     local state = npc:GetNPCState()
     if not state then return nil end
 
