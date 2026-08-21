@@ -125,9 +125,9 @@ end
 function ENT:_AdvancePositionStrategy()
     if self._PositionStrategyIndex < #self._PositionStrategies then
         self._PositionStrategyIndex = self._PositionStrategyIndex + 1
-        log.debug(self, "Position strategy degraded to: ", self._PositionStrategies[self._PositionStrategyIndex].name)
+        log.trace(self, "Position strategy degraded to: ", self._PositionStrategies[self._PositionStrategyIndex].name)
     else
-        log.debug(self, "All position strategies exhausted, staying at: ",
+        log.trace(self, "All position strategies exhausted, staying at: ",
             self._PositionStrategies[self._PositionStrategyIndex].name)
     end
     self._PositionStrategyFailCount = 0
@@ -138,7 +138,7 @@ function ENT:_ResetPositionStrategy()
         self._PositionStrategyIndex = 1
         self._PositionStrategyFailCount = 0
         self._LastPositionStrategyResetTime = CurTime()
-        log.debug(self, "Position strategy reset to eye")
+        log.trace(self, "Position strategy reset to eye")
     end
 end
 

@@ -44,11 +44,13 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function combatHandler(npc, lastSchedule, currentSchedule)
-    if currentSchedule ~= Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD and
-        currentSchedule ~= SCHED_RELOAD then
-        if (lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1 or
+    if currentSchedule ~= SCHED_RELOAD and
+        currentSchedule ~= Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD then
+        if (lastSchedule == SCHED_RANGE_ATTACK1 or
+                lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_ASSAULT or
                 lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_ESTABLISH_LINE_OF_FIRE or
-                lastSchedule == SCHED_RANGE_ATTACK1)
+                lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1
+            )
             and
             npc:HasCondition(COND.ENEMY_OCCLUDED) then
             return SCHED_SHOOT_ENEMY_COVER
