@@ -175,4 +175,42 @@ function M.getEyePos(ent)
     return ent:GetPos()
 end
 
+function M.getPelvisPos(ent)
+    -- 如果之前已缓存骨骼策略，先尝试直接获取
+    if ent._GetPelvisPosStrategyCache then
+        local s = ent._GetPelvisPosStrategyCache
+        if s == "Bone" then
+            local pos = ent:GetBonePosition(ent._GetPelvisPosIDCache)
+            if pos then return pos end
+            ent._GetPelvisPosStrategyCache = nil
+        elseif s == "Pos" then
+            return ent:GetPos()
+        end
+    end
+
+    -- 候选骨盆骨骼（按优先级排列）
+    local bones = {
+        "ValveBiped.Bip01_Pelvis",
+        "ValveBiped.Bip01_Pelvis1",
+        "ValveBiped.Bip01_Spine",
+        "ValveBiped.Bip01_Spine1",
+    }
+
+    for _, boneName in ipairs(bones) do
+        local boneID = ent:LookupBone(boneName)
+        if boneID then
+            local pos = ent:GetBonePosition(boneID)
+            if pos then
+                ent._GetPelvisPosStrategyCache = "Bone"
+                ent._GetPelvisPosIDCache = boneID
+                return pos
+            end
+        end
+    end
+
+    -- 回退到实体中心
+    ent._GetPelvisPosStrategyCache = "Pos"
+    return ent:GetPos()
+end
+
 return M

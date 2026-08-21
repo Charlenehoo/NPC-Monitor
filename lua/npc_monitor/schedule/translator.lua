@@ -1,5 +1,6 @@
 -- npc_monitor/schedule/translator.lua
 -- 订阅 TranslateSchedule 事件，执行调度控制逻辑
+-- 顺序：防重入识别 -> 失败保护 -> 正常决策
 
 local CONSTANTS      = include("npc_monitor/config/constants.lua")
 local Events         = include("npc_monitor/core/events.lua")
@@ -10,7 +11,6 @@ local addUniqueHook  = helpers.addUniqueHook
 local selectSchedule = include("npc_monitor/schedule/selector.lua")
 
 -- 弱键表：以 NPC 为 key，value 是该 NPC 的控制状态。
--- NPC 被垃圾回收后，对应条目自动移除。
 local stateByNPC     = setmetatable({}, { __mode = "k" })
 
 local function getState(npc)
@@ -27,21 +27,13 @@ addUniqueHook("EntityRemoved", function(ent, _)
     stateByNPC[ent] = nil
 end)
 
--- 核心调度控制函数（原逻辑基本不变）
+-- 核心调度控制函数（顺序：防重入识别 -> 失败保护 -> 正常决策）
 addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
     if not IsValid(npc) then return end
 
-    local state = getState(npc)
-    local lastDesired = state.lastDesired
+    local state       = getState(npc)
 
-    -- 1. 如果存在上次设置的 schedule，且它刚刚失败（COND_TASK_FAILED），则阻止重复设置
-    local blockedSchedule = nil
-    if lastDesired and lastSchedule == lastDesired and npc:HasCondition(COND.TASK_FAILED) then
-        blockedSchedule = lastDesired
-        state.lastDesired = nil -- 清除，表示不再控制
-    end
-
-    -- 2. 检查跳过标记（我们自己设置 schedule 引发的二次事件）
+    -- 1. 防重入识别：检查跳过标记（我们自己设置 schedule 引发的二次事件）
     local skipLast    = state.skipLast
     local skipCurrent = state.skipCurrent
 
@@ -55,8 +47,16 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
             -- 不匹配，我们设置的 schedule 被其他因素覆盖
             state.skipLast    = nil
             state.skipCurrent = nil
-            state.lastDesired = nil -- 清除控制状态
+            state.lastDesired = nil    -- 清除控制状态，后续失败保护将失效
         end
+    end
+
+    -- 2. 失败保护：如果存在上次设置的 schedule，且它刚刚失败（COND_TASK_FAILED），则阻止重复设置
+    local lastDesired = state.lastDesired
+    local blockedSchedule = nil
+    if lastDesired and lastSchedule == lastDesired and npc:HasCondition(COND.TASK_FAILED) then
+        blockedSchedule = lastDesired
+        state.lastDesired = nil -- 清除，表示不再控制
     end
 
     -- 3. 正常处理

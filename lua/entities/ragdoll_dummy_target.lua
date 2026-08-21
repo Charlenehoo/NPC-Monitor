@@ -10,6 +10,7 @@ local log                           = include("npc_monitor/logging/log.lua")
 local helpers                       = include("npc_monitor/helpers.lua")
 local findNearestEntity             = helpers.findNearestEntity
 local getEyePos                     = helpers.getEyePos
+local getPelvisPos                  = helpers.getPelvisPos -- 新增引入
 
 local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
 local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE
@@ -17,7 +18,6 @@ local OFFSET                        = CONSTANTS.RAGDOLL_DUMMY.OFFSET
 local MAX                           = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
 
 local MAX_INIT_DURATION             = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
--- local EXECUTIONER_REFRESH_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_REFRESH_INTERVAL
 local EXECUTIONER_SEARCH_INTERVAL   = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_SEARCH_INTERVAL
 local EXECUTIONER_VALIDATE_INTERVAL = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_VALIDATE_INTERVAL
 local EXECUTIONER_MAX_FAIL_COUNT    = CONSTANTS.RAGDOLL_DUMMY.EXECUTIONER_MAX_FAIL_COUNT
@@ -27,6 +27,9 @@ local STATE_TO_SEARCH_RADIUS        = CONSTANTS.RAGDOLL_DUMMY.STATE_TO_SEARCH_RA
 
 local REPOSITION_INTERVAL           = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_INTERVAL
 local REPOSITION_OFFSET_RANGE       = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_OFFSET_RANGE
+
+-- 定期重置回最高优先级策略的时间间隔（秒）
+local POSITION_RESET_INTERVAL       = CONSTANTS.RAGDOLL_DUMMY.POSITION_RESET_INTERVAL
 
 function ENT:Initialize()
     self:SetModel(PROXY_MODEL)
@@ -68,13 +71,13 @@ function ENT:_TryRefreshPotentialExecutioners()
     end
 end
 
-function ENT:_TryReposition(ragdollEyePos)
+function ENT:_TryReposition(activePos)
     local offset = Vector(
         math.random(-REPOSITION_OFFSET_RANGE.x, REPOSITION_OFFSET_RANGE.x),
         math.random(-REPOSITION_OFFSET_RANGE.y, REPOSITION_OFFSET_RANGE.y),
         math.random(-REPOSITION_OFFSET_RANGE.z, REPOSITION_OFFSET_RANGE.z)
     )
-    self:SetPos(ragdollEyePos + offset)
+    self:SetPos(activePos + offset)
 end
 
 function ENT:Init(owner, ragdoll)
@@ -85,8 +88,6 @@ function ENT:Init(owner, ragdoll)
 
     self._Owner = owner
     self._Ragdoll = ragdoll
-    -- self._CreateTime = now
-    -- self._LastRefreshTime = 0
     self._LastSearchTime = now + MAX_INIT_DURATION
     self._LastExecutionerCheckTime = now - 1
     self._ExecutionerFailCount = 0
@@ -98,6 +99,47 @@ function ENT:Init(owner, ragdoll)
 
     self._LastRepositionTime = 0
     self._RepositionAttempt = 0
+
+    -- 位置提取策略初始化
+    self._PositionStrategies = {
+        { name = "eye",    getPos = function(ragdoll) return getEyePos(ragdoll) end },
+        { name = "pelvis", getPos = function(ragdoll) return getPelvisPos(ragdoll) end },
+    }
+    self._PositionStrategyIndex = 1
+    self._PositionStrategyFailCount = 0
+    self._LastPositionStrategyResetTime = now
+end
+
+function ENT:_GetActivePosition()
+    local ragdoll = self._Ragdoll
+    if not IsValid(ragdoll) then return nil end
+
+    local strategy = self._PositionStrategies[self._PositionStrategyIndex]
+    if strategy then
+        return strategy.getPos(ragdoll)
+    else
+        return ragdoll:GetPos()
+    end
+end
+
+function ENT:_AdvancePositionStrategy()
+    if self._PositionStrategyIndex < #self._PositionStrategies then
+        self._PositionStrategyIndex = self._PositionStrategyIndex + 1
+        log.debug(self, "Position strategy degraded to: ", self._PositionStrategies[self._PositionStrategyIndex].name)
+    else
+        log.debug(self, "All position strategies exhausted, staying at: ",
+            self._PositionStrategies[self._PositionStrategyIndex].name)
+    end
+    self._PositionStrategyFailCount = 0
+end
+
+function ENT:_ResetPositionStrategy()
+    if self._PositionStrategyIndex ~= 1 then
+        self._PositionStrategyIndex = 1
+        self._PositionStrategyFailCount = 0
+        self._LastPositionStrategyResetTime = CurTime()
+        log.debug(self, "Position strategy reset to eye")
+    end
 end
 
 function ENT:_GetRagdollState(ragdoll)
@@ -134,9 +176,9 @@ function ENT:_GetRagdollState(ragdoll)
     end
 
     -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
-    local JUST_FOR_SURE_OFFSET = 100
+    local JUST_FOR_SURE_OFFSET = -100
     if stateName == "dead" then
-        if (hp_c == nil or hp_c > -JUST_FOR_SURE_OFFSET) and (hp_d == nil or hp_d > -JUST_FOR_SURE_OFFSET) then
+        if not ((hp_c ~= nil and hp_c <= JUST_FOR_SURE_OFFSET) or (hp_d ~= nil and hp_d <= JUST_FOR_SURE_OFFSET)) then
             stateName = "writhing"
         end
     end
@@ -145,6 +187,8 @@ function ENT:_GetRagdollState(ragdoll)
     if lastState ~= stateName then
         log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
         self._LastRagdollState = stateName
+        -- ragdoll 状态变化时，重置位置策略到最高优先级
+        self:_ResetPositionStrategy()
     end
 
     return stateName
@@ -180,16 +224,22 @@ function ENT:Think()
         return
     end
 
-    local ragdollEyePos = getEyePos(ragdoll)
+    -- 获取当前策略下的活动位置
+    local activePos = self:_GetActivePosition()
+    if not activePos then
+        -- 无法获取有效位置（理论上不会发生，但防止 nil）
+        return
+    end
 
     local function canBeExecutedBy(npc)
         if not IsValid(npc) then return false end
-        if not npc:TestPVS(ragdollEyePos) then return false end
-        if not npc:IsInViewCone(ragdollEyePos) then return false end
-        if not npc:IsLineOfSightClear(ragdollEyePos) then return false end
+        if not npc:TestPVS(activePos) then return false end
+        if not npc:IsInViewCone(activePos) then return false end
+        if not npc:IsLineOfSightClear(activePos) then return false end
         return true
     end
 
+    -- 执行者存在时的验证与定位
     if IsValid(self._Executioner) then
         if now - self._LastExecutionerCheckTime > EXECUTIONER_VALIDATE_INTERVAL then
             self._LastExecutionerCheckTime = now
@@ -200,24 +250,29 @@ function ENT:Think()
 
                 if now - self._ExecutionerAssignedTime > EXECUTIONER_TIMEOUT then
                     self:_CancelExecutioner()
+                    -- 超时也考虑降级，可能是当前位置无法持续维持
+                    self:_AdvancePositionStrategy()
                 end
             else
                 self._ExecutionerFailCount = self._ExecutionerFailCount + 1
                 if self._ExecutionerFailCount >= EXECUTIONER_MAX_FAIL_COUNT then
                     self:_CancelExecutioner()
+                    -- 验证连续失败，很可能当前参考点失效，降级
+                    self:_AdvancePositionStrategy()
                 end
             end
         end
 
         if IsValid(self._Executioner) then
             local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (ragdollEyePos - shootPos):GetNormalized()
+            local dir = (activePos - shootPos):GetNormalized()
             self:SetPos(shootPos + dir * OFFSET)
             self:SetAngles(dir:GetNegated():Angle())
             return
         end
     end
 
+    -- 搜索阶段
     if now - self._LastSearchTime > EXECUTIONER_SEARCH_INTERVAL then
         self._LastSearchTime = now
 
@@ -234,18 +289,32 @@ function ENT:Think()
 
         local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
         if searchRadius then
-            local nearest = findNearestEntity(ragdollEyePos, searchRadius, self._PotentialExecutioners,
-                canBeExecutedBy)
+            local nearest = findNearestEntity(activePos, searchRadius, self._PotentialExecutioners, canBeExecutedBy)
             if IsValid(nearest) then
                 self._Executioner = nearest
                 self._ExecutionerAssignedTime = CurTime()
-                self._Executioner:AddEntityRelationship(self, D_HT, MAX) -- init new executioner
+                self._Executioner:AddEntityRelationship(self, D_HT, MAX)
+                -- 搜索成功，重置当前策略失败计数
+                self._PositionStrategyFailCount = 0
+            else
+                -- 搜索失败，累计当前策略失败
+                self._PositionStrategyFailCount = self._PositionStrategyFailCount + 1
+                if self._PositionStrategyFailCount >= EXECUTIONER_MAX_FAIL_COUNT then
+                    self:_AdvancePositionStrategy()
+                    -- 降级后等待下一搜索周期再尝试，避免同帧重复搜索
+                end
             end
         end
     end
 
+    -- 重定位（使用当前活动位置）
     if now - self._LastRepositionTime > REPOSITION_INTERVAL then
         self._LastRepositionTime = now
-        self:_TryReposition(ragdollEyePos)
+        self:_TryReposition(activePos)
+    end
+
+    -- 定期重置策略到最高优先级（给眼睛位置重新尝试的机会）
+    if now - self._LastPositionStrategyResetTime > POSITION_RESET_INTERVAL then
+        self:_ResetPositionStrategy()
     end
 end

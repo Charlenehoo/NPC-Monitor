@@ -50,6 +50,8 @@ M.RAGDOLL_DUMMY              = {
 
     REPOSITION_INTERVAL           = 0.15,               -- 极短冷却，保持高频尝试
     REPOSITION_OFFSET_RANGE       = Vector(25, 25, 15), -- 最大偏移范围（对称）
+
+    POSITION_RESET_INTERVAL       = 3.0
 }
 
 return M
