@@ -12,6 +12,14 @@ local selectSchedule = include("npc_monitor/schedule/selector.lua")
 
 -- 弱键表：以 NPC 为 key，value 是该 NPC 的控制状态。
 local stateByNPC     = setmetatable({}, { __mode = "k" })
+-- 弱键表：缓存每个 NPC 上一次的 schedule，供 TryControlNPC 主动调用时提供 lastSchedule
+local lastSchedules  = setmetatable({}, { __mode = "k" })
+
+-- Hook：实体移除时清理缓存
+addUniqueHook("EntityRemoved", function(ent, _)
+    stateByNPC[ent]    = nil
+    lastSchedules[ent] = nil
+end)
 
 local function getState(npc)
     local state = stateByNPC[npc]
@@ -22,14 +30,10 @@ local function getState(npc)
     return state
 end
 
--- Hook：实体移除时清理缓存
-addUniqueHook("EntityRemoved", function(ent, _)
-    stateByNPC[ent] = nil
-end)
-
--- 核心调度控制函数（顺序：防重入识别 -> 失败保护 -> 正常决策）
-addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
-    if not IsValid(npc) then return end
+-- 核心调度控制逻辑（供事件钩子和主动调用共用）
+-- @return desiredSchedule 如果执行了 SetSchedule 则返回目标 schedule，否则返回 nil
+local function overrideSchedule(npc, lastSchedule, currentSchedule)
+    if not IsValid(npc) then return nil end
 
     local state       = getState(npc)
 
@@ -42,12 +46,12 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
             -- 匹配，是我们自己设置的 schedule 生效，消费标记并返回
             state.skipLast    = nil
             state.skipCurrent = nil
-            return
+            return nil
         else
             -- 不匹配，我们设置的 schedule 被其他因素覆盖
             state.skipLast    = nil
             state.skipCurrent = nil
-            state.lastDesired = nil    -- 清除控制状态，后续失败保护将失效
+            state.lastDesired = nil -- 清除控制状态，后续失败保护将失效
         end
     end
 
@@ -65,7 +69,7 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
     if desiredSchedule then
         -- 如果刚刚失败的 schedule 正好又是期望的，则本次放弃设置，避免循环
         if blockedSchedule and desiredSchedule == blockedSchedule then
-            return
+            return nil
         end
 
         -- 更新最后期望 schedule
@@ -76,9 +80,36 @@ addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSched
             state.skipLast    = currentSchedule
             state.skipCurrent = desiredSchedule
             npc:SetSchedule(desiredSchedule)
+            return desiredSchedule
         end
     else
         -- 不需要控制，清除最后期望记录
         state.lastDesired = nil
     end
+
+    return nil
+end
+
+-- 暴露主动控制接口：其他模块（如 dummy）可以调用此函数强制 NPC 重新评估调度
+-- 使用场景：当 NPC 停留在某个 schedule（如 SCHED_ALERT_STAND）且 dummy 稍后才准备好时，
+--          可以直接调用此函数让 NPC 重新决策，而不必等待自然的 schedule 变化事件。
+function NPCMonitor.SetSchedule(npc)
+    if not IsValid(npc) then return false end
+
+    local currentSchedule = npc:GetCurrentSchedule()
+    local lastSchedule    = lastSchedules[npc] or currentSchedule
+
+    return overrideSchedule(npc, lastSchedule, currentSchedule)
+end
+
+-- 订阅事件：正常 schedule 变化时触发
+addUniqueHook(Events.TranslateSchedule, function(npc, lastSchedule, currentSchedule)
+    local result = overrideSchedule(npc, lastSchedule, currentSchedule)
+
+    -- 更新自己的 lastSchedules 缓存，便于主动调用时提供 lastSchedule
+    if IsValid(npc) then
+        lastSchedules[npc] = currentSchedule
+    end
+
+    return result
 end)

@@ -4,29 +4,12 @@ local log       = include("npc_monitor/logging/log.lua")
 local helpers   = include("npc_monitor/helpers.lua")
 
 local function idleHandler(npc, lastSchedule, currentSchedule)
-    if lastSchedule == SCHED_ALERT_STAND or
-        currentSchedule == SCHED_ALERT_STAND then
-        local dummyOfChoice
-
-        NPCMonitor.ForEachActiveDummy(function(dummy)
-            if IsValid(dummy) then
-                dummyOfChoice = dummy
-                return true
-            end
-        end)
-
-        if dummyOfChoice then
-            npc:SetTarget(dummyOfChoice)
-            return SCHED_TARGET_CHASE
-        end
-    end
-
     return nil
 end
 
 local function alertHandler(npc, lastSchedule, currentSchedule)
-    if lastSchedule == SCHED_ALERT_STAND or
-        currentSchedule == SCHED_ALERT_STAND then
+    if currentSchedule == SCHED_ALERT_STAND or
+        currentSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_PATROL then
         local dummyOfChoice
 
         NPCMonitor.ForEachActiveDummy(function(dummy)
@@ -49,6 +32,7 @@ local function combatHandler(npc, lastSchedule, currentSchedule)
     if currentSchedule ~= SCHED_RELOAD and
         currentSchedule ~= Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_HIDE_AND_RELOAD then
         if (lastSchedule == SCHED_RANGE_ATTACK1 or
+                lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_SIGNAL_SUPPRESS or
                 lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_ASSAULT or
                 lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_ESTABLISH_LINE_OF_FIRE or
                 lastSchedule == Enum.COMBINE_SCHEDULE_ENUM.SCHED_COMBINE_RANGE_ATTACK1
