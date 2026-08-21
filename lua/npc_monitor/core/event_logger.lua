@@ -4,6 +4,7 @@
 local Events          = include("npc_monitor/core/events.lua")
 local log             = include("npc_monitor/logging/log.lua")
 local helpers         = include("npc_monitor/helpers.lua")
+local addUniqueHook   = helpers.addUniqueHook
 
 local getScheduleName = helpers.getScheduleName
 local getStateName    = helpers.getStateName
@@ -15,21 +16,21 @@ local function shouldLog(npc)
 end
 
 -- 订阅 schedule 变化事件
-hook.Add(Events.TranslateSchedule, "NPCMonitor.EventLogger.TranslateSchedule", function(npc, last, current)
+addUniqueHook(Events.TranslateSchedule, function(npc, last, current)
     if shouldLog(npc) then
         log.debug(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
     end
 end)
 
 -- 订阅 state 变化事件
-hook.Add(Events.OnStateChange, "NPCMonitor.EventLogger.OnStateChange", function(npc, last, current)
+addUniqueHook(Events.OnStateChange, function(npc, last, current)
     if shouldLog(npc) then
         log.info(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
     end
 end)
 
 -- 订阅 enemy 变化事件
-hook.Add(Events.OnEnemyChange, "NPCMonitor.EventLogger.OnEnemyChange", function(npc, last, current)
+addUniqueHook(Events.OnEnemyChange, function(npc, last, current)
     if shouldLog(npc) then
         last = last or "No Enemy"
         current = current or "No Enemy"
