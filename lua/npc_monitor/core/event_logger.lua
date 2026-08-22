@@ -39,8 +39,9 @@ addUniqueHook(Events.OnEnemyChange, function(npc, last, current)
 end)
 
 -- 如果启用条件变化检测，可在此订阅 Events.OnCondition
--- hook.Add(Events.OnCondition, "NPCMonitor.EventLogger.OnCondition", function(npc, conditionName, conditionID, lastValue, currentValue)
---     if not shouldLog(npc) then return end
---     local status = currentValue and "SET" or "CLEAR"
---     log.trace(npc, "ConditionChange: ", conditionName, " [", status, "]")
--- end)
+hook.Add(Events.OnCondition, "NPCMonitor.EventLogger.OnCondition",
+    function(npc, conditionName, conditionID, lastValue, currentValue)
+        if not shouldLog(npc) then return end
+        local status = currentValue and "SET" or "CLEAR"
+        log.trace(npc, "ConditionChange: ", conditionName, " [", status, "]")
+    end)
