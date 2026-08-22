@@ -219,17 +219,17 @@ function ENT:_GetRagdollState(ragdoll)
     end
 
     -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
-    local function ThirdPartyIsDead(offset)
+    local function isDead(offset)
         return ((c ~= nil and c <= offset) or
             (d ~= nil and d <= offset))
     end
     if stateName == "dead" then
-        if not ThirdPartyIsDead(0) then
+        if not isDead(0) then
             stateName = "writhing"
         end
     end
     local JUST_FOR_SURE_OFFSET = -100
-    if ThirdPartyIsDead(JUST_FOR_SURE_OFFSET) then
+    if isDead(JUST_FOR_SURE_OFFSET) then
         stateName = "dead"
     end
 
