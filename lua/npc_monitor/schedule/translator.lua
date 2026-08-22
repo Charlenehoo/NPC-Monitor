@@ -48,10 +48,10 @@ local function executeControl(npc, lastSchedule, currentSchedule)
             skipCurrentSchedules[npc] = nil
             lastDesiredSchedules[npc] = nil -- 清除控制状态，后续失败保护将失效
 
-            log.warn(npc, "Schedule overwritten externally! Expected %s -> %s, but got %s -> %s",
-                getScheduleName(skipLast, npc),
-                getScheduleName(skipCurrent, npc),
-                getScheduleName(lastSchedule, npc),
+            log.warn(npc, "Schedule overwritten externally! Expected " ..
+                getScheduleName(skipLast, npc) .. " -> " ..
+                getScheduleName(skipCurrent, npc) .. ", but got " ..
+                getScheduleName(lastSchedule, npc) .. " -> " ..
                 getScheduleName(currentSchedule, npc))
         end
     end
@@ -63,8 +63,9 @@ local function executeControl(npc, lastSchedule, currentSchedule)
         blockedSchedule = lastDesired
         lastDesiredSchedules[npc] = nil -- 清除，表示不再控制
 
-        log.warn(npc, "Controlled schedule failed: %s (COND_TASK_FAILED). Stopping control.",
-            getScheduleName(blockedSchedule, npc))
+        log.warn(npc, "Controlled schedule failed: " ..
+            getScheduleName(blockedSchedule, npc) ..
+            " (COND_TASK_FAILED). Stopping control.")
     end
 
     -- 3. 正常处理
@@ -80,12 +81,13 @@ local function executeControl(npc, lastSchedule, currentSchedule)
         if lastDesiredSchedules[npc] ~= desiredSchedule then
             if lastDesiredSchedules[npc] then
                 -- 已有控制，且目标不同 -> 切换控制
-                log.info(npc, "Switch control target: %s -> %s",
-                    getScheduleName(lastDesiredSchedules[npc], npc),
+                log.info(npc, "Switch control target: " ..
+                    getScheduleName(lastDesiredSchedules[npc], npc) .. " -> " ..
                     getScheduleName(desiredSchedule, npc))
             else
                 -- 之前没有控制 -> 开始控制
-                log.info(npc, "Start control: %s", getScheduleName(desiredSchedule, npc))
+                log.info(npc, "Start control: " ..
+                    getScheduleName(desiredSchedule, npc))
             end
         end
 
@@ -102,7 +104,8 @@ local function executeControl(npc, lastSchedule, currentSchedule)
     else
         -- 不需要控制
         if lastDesiredSchedules[npc] then
-            log.info(npc, "Stop control: %s", getScheduleName(lastDesiredSchedules[npc], npc))
+            log.info(npc, "Stop control: " ..
+                getScheduleName(lastDesiredSchedules[npc], npc))
             lastDesiredSchedules[npc] = nil
         end
     end

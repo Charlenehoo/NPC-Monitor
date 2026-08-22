@@ -40,10 +40,10 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function combatHandler(npc, lastSchedule, currentSchedule)
-    -- if npc:HasCondition(COND.ENEMY_FACING_ME) then
-    --     return SCHED_CHASE_ENEMY
-    -- end
-    return SCHED_CHASE_ENEMY
+    if npc:HasCondition(COND.ENEMY_FACING_ME) then
+        return SCHED_CHASE_ENEMY
+    end
+    return
 end
 
 local function handler(npc, lastSchedule, currentSchedule)
