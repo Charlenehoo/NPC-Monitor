@@ -16,11 +16,11 @@ local function shouldLog(npc)
 end
 
 -- 订阅 schedule 变化事件
-addUniqueHook(Events.TranslateSchedule, function(npc, last, current)
-    if shouldLog(npc) then
-        log.trace(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
-    end
-end)
+-- addUniqueHook(Events.TranslateSchedule, function(npc, last, current)
+--     if shouldLog(npc) then
+--         log.trace(npc, "TranslateSchedule: ", getScheduleName(last, npc), " -> ", getScheduleName(current, npc))
+--     end
+-- end)
 
 -- 订阅 state 变化事件
 addUniqueHook(Events.OnStateChange, function(npc, last, current)

@@ -56,7 +56,7 @@ M.RAGDOLL_DUMMY              = {
     REPOSITION_HEIGHT_MIN         = -25,
     REPOSITION_HEIGHT_MAX         = 50,
 
-    POSITION_RESET_INTERVAL       = 3.0
+    POSITION_RESET_INTERVAL       = 15.0
 }
 
 return M
