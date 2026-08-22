@@ -10,7 +10,9 @@ local log                           = include("npc_monitor/logging/log.lua")
 local helpers                       = include("npc_monitor/helpers.lua")
 local findNearestEntity             = helpers.findNearestEntity
 local getEyePos                     = helpers.getEyePos
-local getPelvisPos                  = helpers.getPelvisPos -- 新增引入
+local getPelvisPos                  = helpers.getPelvisPos
+
+local BONE_FALLBACK_ORDER           = include("npc_monitor/config/bones.lua")
 
 local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
 local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE

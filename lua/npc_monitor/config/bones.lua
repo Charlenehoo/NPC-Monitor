@@ -75,3 +75,5 @@ local BONE_FALLBACK_ORDER = {
     "ValveBiped.Bip01_R_Finger41",
     "ValveBiped.Bip01_R_Finger42",
 }
+
+return BONE_FALLBACK_ORDER
