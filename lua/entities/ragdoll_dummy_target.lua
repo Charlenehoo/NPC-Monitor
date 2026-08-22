@@ -201,29 +201,35 @@ function ENT:_GetRagdollState(ragdoll)
     end
 
     -- thirdPartyMODState is not that accurate, so fix it with raw data
-    local hp_c = ragdoll.Hp_c
-    local hp_d = ragdoll.Hp_d
+    local c = ragdoll.Hp_c
+    local d = ragdoll.Hp_d
     if stateName == "falling" then
-        if hp_c ~= nil and hp_c > 0 and (hp_d == nil or hp_d > 0) then
-            if ragdoll.IsWrithing or ragdoll.IsTwitching then
-                stateName = "writhing"
-            elseif ragdoll.IsReviving then
-                stateName = "reviving"
-            else
-                stateName = "crawling"
+        local t = ragdoll.Anim_St
+        if t and CurTime() > t then
+            if c ~= nil and c > 0 and (d == nil or d > 0) then
+                if ragdoll.IsWrithing or ragdoll.IsTwitching then
+                    stateName = "writhing"
+                elseif ragdoll.IsReviving then
+                    stateName = "reviving"
+                else
+                    stateName = "crawling"
+                end
             end
         end
     end
 
     -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
+    local function ThirdPartyIsDead(offset)
+        return ((c ~= nil and c <= offset) or
+            (d ~= nil and d <= offset))
+    end
     if stateName == "dead" then
-        if not ((hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0)) then
+        if not ThirdPartyIsDead(0) then
             stateName = "writhing"
         end
     end
-
     local JUST_FOR_SURE_OFFSET = -100
-    if (hp_c ~= nil and hp_c <= JUST_FOR_SURE_OFFSET) or (hp_d ~= nil and hp_d <= JUST_FOR_SURE_OFFSET) then
+    if ThirdPartyIsDead(JUST_FOR_SURE_OFFSET) then
         stateName = "dead"
     end
 
