@@ -7,6 +7,7 @@ local Events               = include("npc_monitor/core/events.lua")
 local log                  = include("npc_monitor/logging/log.lua")
 local helpers              = include("npc_monitor/helpers.lua")
 local addUniqueHook        = helpers.addUniqueHook
+local getScheduleName      = helpers.getScheduleName
 
 local selectSchedule       = include("npc_monitor/schedule/selector.lua")
 
@@ -37,7 +38,7 @@ local function executeControl(npc, lastSchedule, currentSchedule)
 
     if skipLast ~= nil and skipCurrent ~= nil then
         if lastSchedule == skipLast and currentSchedule == skipCurrent then
-            -- 匹配，是我们自己设置的 schedule 生效，消费标记并返回
+            -- 匹配，是我们自己设置的 schedule 生效，消费标记并返回，不打印
             skipLastSchedules[npc]    = nil
             skipCurrentSchedules[npc] = nil
             return nil
@@ -46,6 +47,12 @@ local function executeControl(npc, lastSchedule, currentSchedule)
             skipLastSchedules[npc]    = nil
             skipCurrentSchedules[npc] = nil
             lastDesiredSchedules[npc] = nil -- 清除控制状态，后续失败保护将失效
+
+            log.warn(npc, "Schedule overwritten externally! Expected %s -> %s, but got %s -> %s",
+                getScheduleName(skipLast, npc),
+                getScheduleName(skipCurrent, npc),
+                getScheduleName(lastSchedule, npc),
+                getScheduleName(currentSchedule, npc))
         end
     end
 
@@ -55,6 +62,9 @@ local function executeControl(npc, lastSchedule, currentSchedule)
     if lastDesired and lastSchedule == lastDesired and npc:HasCondition(COND.TASK_FAILED) then
         blockedSchedule = lastDesired
         lastDesiredSchedules[npc] = nil -- 清除，表示不再控制
+
+        log.warn(npc, "Controlled schedule failed: %s (COND_TASK_FAILED). Stopping control.",
+            getScheduleName(blockedSchedule, npc))
     end
 
     -- 3. 正常处理
@@ -64,6 +74,19 @@ local function executeControl(npc, lastSchedule, currentSchedule)
         -- 如果刚刚失败的 schedule 正好又是期望的，则本次放弃设置，避免循环
         if blockedSchedule and desiredSchedule == blockedSchedule then
             return nil
+        end
+
+        -- 检测控制目标是否发生变化，并打印相应日志
+        if lastDesiredSchedules[npc] ~= desiredSchedule then
+            if lastDesiredSchedules[npc] then
+                -- 已有控制，且目标不同 -> 切换控制
+                log.info(npc, "Switch control target: %s -> %s",
+                    getScheduleName(lastDesiredSchedules[npc], npc),
+                    getScheduleName(desiredSchedule, npc))
+            else
+                -- 之前没有控制 -> 开始控制
+                log.info(npc, "Start control: %s", getScheduleName(desiredSchedule, npc))
+            end
         end
 
         -- 更新最后期望 schedule
@@ -77,8 +100,11 @@ local function executeControl(npc, lastSchedule, currentSchedule)
             return desiredSchedule
         end
     else
-        -- 不需要控制，清除最后期望记录
-        lastDesiredSchedules[npc] = nil
+        -- 不需要控制
+        if lastDesiredSchedules[npc] then
+            log.info(npc, "Stop control: %s", getScheduleName(lastDesiredSchedules[npc], npc))
+            lastDesiredSchedules[npc] = nil
+        end
     end
 
     return nil
