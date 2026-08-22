@@ -3,8 +3,6 @@ local Enum      = include("npc_monitor/config/enum.lua")
 local log       = include("npc_monitor/logging/log.lua")
 local helpers   = include("npc_monitor/helpers.lua")
 
-
-
 local function idleHandler(npc, lastSchedule, currentSchedule)
     local candidates = {}
     NPCMonitor.ForEachActiveDummy(function(dummy)
@@ -40,28 +38,10 @@ local function alertHandler(npc, lastSchedule, currentSchedule)
 end
 
 local function combatHandler(npc, lastSchedule, currentSchedule)
-    local enemy = npc:GetEnemy()
-    if not IsValid(enemy) then return nil end
-    if enemy:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then return end
-
-    -- 如果已经能近战攻击，让 NPC 自己处理（或直接返回 SCHED_MELEE_ATTACK1）
-    if npc:HasCondition(COND.CAN_MELEE_ATTACK1) then
-        return nil -- 或 return SCHED_MELEE_ATTACK1
-    end
-
-    -- 如果敌人还活着且不在近战范围，强制跑向敌人
-    if not npc:HasCondition(COND.ENEMY_DEAD) then
-        -- 关键：设置 SavePosition 为敌人当前位置
-        npc:SetSaveValue("m_vecLastPosition", enemy:GetPos())
-        return SCHED_FORCED_GO_RUN
-    end
-
     return nil
 end
 
 local function handler(npc, lastSchedule, currentSchedule)
-    if lastSchedule == SCHED_FAIL or currentSchedule == SCHED_FAIL then return nil end
-
     local state = npc:GetNPCState()
     if not state then return nil end
 
