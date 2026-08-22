@@ -41,9 +41,9 @@ M.RAGDOLL_DUMMY              = {
 
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
-        falling  = 315,
+        falling  = 400,
         writhing = 160,
-        crawling = 630,
+        crawling = 1000,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
