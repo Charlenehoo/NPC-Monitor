@@ -35,21 +35,26 @@ M.RAGDOLL_DUMMY              = {
     MAX_INIT_DURATION             = 0.3,
     -- EXECUTIONER_REFRESH_INTERVAL = 6.0,
     EXECUTIONER_SEARCH_INTERVAL   = 0.3,
-    EXECUTIONER_VALIDATE_INTERVAL = 0.3,
+    EXECUTIONER_VALIDATE_INTERVAL = 0.6,
     EXECUTIONER_MAX_FAIL_COUNT    = 2,
     EXECUTIONER_TIMEOUT           = 3.0,
 
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
-        falling  = 200,
-        writhing = 100,
-        crawling = 400,
+        falling  = 315,
+        writhing = 160,
+        crawling = 630,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
 
     REPOSITION_INTERVAL           = 0.15,               -- 极短冷却，保持高频尝试
     REPOSITION_OFFSET_RANGE       = Vector(25, 25, 15), -- 最大偏移范围（对称）
+
+    REPOSITION_RADIUS_MIN         = 100,
+    REPOSITION_RADIUS_MAX         = 150,
+    REPOSITION_HEIGHT_MIN         = -25,
+    REPOSITION_HEIGHT_MAX         = 50,
 
     POSITION_RESET_INTERVAL       = 3.0
 }

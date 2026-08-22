@@ -91,14 +91,23 @@ function ENT:_TryReposition(activePos)
         table.insert(filter, ragdoll)
     end
 
-    local maxAttempts = 10
+    local maxAttempts = 100
+
+    -- 圆环柱参数：优先使用新配置，否则回退到旧的水平偏移范围
+    local rMin = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MIN
+    local rMax = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MAX
+    local hMin = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_HEIGHT_MIN
+    local hMax = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_HEIGHT_MAX
 
     for _ = 1, maxAttempts do
-        local offset = Vector(
-            math.random(-REPOSITION_OFFSET_RANGE.x, REPOSITION_OFFSET_RANGE.x),
-            math.random(-REPOSITION_OFFSET_RANGE.y, REPOSITION_OFFSET_RANGE.y),
-            math.random(-REPOSITION_OFFSET_RANGE.z, REPOSITION_OFFSET_RANGE.z)
-        )
+        -- 随机角度 0 ~ 2π
+        local theta = math.random() * 2 * math.pi
+        -- 随机半径 rMin ~ rMax
+        local r = rMin + (rMax - rMin) * math.random()
+        -- 随机高度 hMin ~ hMax
+        local z = hMin + (hMax - hMin) * math.random()
+
+        local offset = Vector(r * math.cos(theta), r * math.sin(theta), z)
         local candidatePos = activePos + offset
 
         local tr = util.TraceLine({

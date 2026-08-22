@@ -81,12 +81,12 @@ local function executeControl(npc, lastSchedule, currentSchedule)
         if lastDesiredSchedules[npc] ~= desiredSchedule then
             if lastDesiredSchedules[npc] then
                 -- 已有控制，且目标不同 -> 切换控制
-                log.info(npc, "Switch control target: " ..
+                log.debug(npc, "Switch control target: " ..
                     getScheduleName(lastDesiredSchedules[npc], npc) .. " -> " ..
                     getScheduleName(desiredSchedule, npc))
             else
                 -- 之前没有控制 -> 开始控制
-                log.info(npc, "Start control: " ..
+                log.debug(npc, "Start control: " ..
                     getScheduleName(desiredSchedule, npc))
             end
         end
@@ -104,7 +104,7 @@ local function executeControl(npc, lastSchedule, currentSchedule)
     else
         -- 不需要控制
         if lastDesiredSchedules[npc] then
-            log.info(npc, "Stop control: " ..
+            log.debug(npc, "Stop control: " ..
                 getScheduleName(lastDesiredSchedules[npc], npc))
             lastDesiredSchedules[npc] = nil
         end

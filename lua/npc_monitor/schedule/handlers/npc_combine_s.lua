@@ -42,6 +42,7 @@ end
 local function combatHandler(npc, lastSchedule, currentSchedule)
     local enemy = npc:GetEnemy()
     if not IsValid(enemy) then return nil end
+    if enemy:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then return end
 
     -- 如果已经能近战攻击，让 NPC 自己处理（或直接返回 SCHED_MELEE_ATTACK1）
     if npc:HasCondition(COND.CAN_MELEE_ATTACK1) then
