@@ -272,13 +272,82 @@ M.COMBINE_SCHEDULE_ENUM       = {
     SCHED_COMBINE_CHARGE_TURRET = 111,
     SCHED_COMBINE_DROP_GRENADE = 112,
     SCHED_COMBINE_CHARGE_PLAYER = 113,
-    SCHED_COMBINE_PATROL_ENEMY = 114,
-    SCHED_COMBINE_BURNING_STAND = 115,
+
     SCHED_COMBINE_AR2_ALTFIRE = 116,
     SCHED_COMBINE_FORCED_GRENADE_THROW = 117,
     SCHED_COMBINE_MOVE_TO_FORCED_GREN_LOS = 118,
+
+    SCHED_COMBINE_PATROL_ENEMY = 114,
+    SCHED_COMBINE_BURNING_STAND = 115,
     SCHED_COMBINE_FACE_IDEAL_YAW = 119,
     SCHED_COMBINE_MOVE_TO_MELEE = 120,
+    --  //=========================================================
+    --  // SCHED_COMBINE_PATROL_ENEMY
+    --  //
+    --  // Used instead if SCHED_COMBINE_PATROL if I have an enemy.
+    --  // Wait for the enemy a bit in the hopes of ambushing him.
+    --  //=========================================================
+    --  DEFINE_SCHEDULE	
+    --  (
+    --  SCHED_COMBINE_PATROL_ENEMY,
+
+    --  "	Tasks"
+    --  "		TASK_STOP_MOVING					0"
+    --  "		TASK_WAIT_FACE_ENEMY				1"
+    --  "		TASK_WAIT_FACE_ENEMY_RANDOM			3"
+    --  ""
+    --  "	Interrupts"
+    --  "		COND_ENEMY_DEAD"
+    --  "		COND_LIGHT_DAMAGE"
+    --  "		COND_HEAVY_DAMAGE"
+    --  "		COND_HEAR_DANGER"
+    --  "		COND_HEAR_MOVE_AWAY"
+    --  "		COND_NEW_ENEMY"
+    --  "		COND_SEE_ENEMY"
+    --  "		COND_CAN_RANGE_ATTACK1"
+    --  "		COND_CAN_RANGE_ATTACK2"
+    --  )
+
+    --  DEFINE_SCHEDULE
+    --  (
+    --  SCHED_COMBINE_BURNING_STAND,
+
+    --  "	Tasks"
+    --  "		TASK_SET_ACTIVITY				ACTIVITY:ACT_COMBINE_BUGBAIT"
+    --  "		TASK_RANDOMIZE_FRAMERATE		20"
+    --  "		TASK_WAIT						2"
+    --  "		TASK_WAIT_RANDOM				3"
+    --  "		TASK_COMBINE_DIE_INSTANTLY		DMG_BURN"
+    --  "		TASK_WAIT						1.0"
+    --  "	"
+    --  "	Interrupts"
+    --  )
+
+    --  DEFINE_SCHEDULE
+    --  (
+    --  SCHED_COMBINE_FACE_IDEAL_YAW,
+
+    --  "	Tasks"
+    --  "		TASK_FACE_IDEAL				0"
+    --  "	"
+    --  "	Interrupts"
+    --  )
+
+    --  DEFINE_SCHEDULE
+    --  (
+    --  SCHED_COMBINE_MOVE_TO_MELEE,
+
+    --  "	Tasks"
+    --  "		TASK_STORE_ENEMY_POSITION_IN_SAVEPOSITION	0"
+    --  "		TASK_GET_PATH_TO_SAVEPOSITION				0"
+    --  "		TASK_RUN_PATH								0"
+    --  "		TASK_WAIT_FOR_MOVEMENT						0"
+    --   "	"
+    --  "	Interrupts"
+    --  "		COND_NEW_ENEMY"
+    --  "		COND_ENEMY_DEAD"
+    --  "		COND_CAN_MELEE_ATTACK1"
+    --  )
 }
 M.COMBINE_SCHEDULE_ID_TO_NAME = makeReverseTable(M.COMBINE_SCHEDULE_ENUM)
 
