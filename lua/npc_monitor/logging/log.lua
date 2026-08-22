@@ -48,6 +48,15 @@ local tostring = function(...)
     return table.concat(t, " ")
 end
 
+-- 新增：基于 SysTime 的高精度时间格式化（秒:毫秒:微秒）
+local function formatTimestamp()
+    local t = SysTime()
+    local seconds = math.floor(t)
+    local milliseconds = math.floor((t - seconds) * 1000)
+    local microseconds = math.floor((t - seconds - milliseconds / 1000) * 1000000)
+    return string.format("%d:%03d:%03d", seconds, milliseconds, microseconds)
+end
+
 for i, x in ipairs(modes) do
     local nameupper = x.name:upper()
     log[x.name] = function(...)
@@ -60,10 +69,10 @@ for i, x in ipairs(modes) do
         local info = debug.getinfo(2, "Sl")
         local lineinfo = info.short_src .. ":" .. info.currentline
 
-        -- Build the console message (time only with seconds)
+        -- Build the console message (time with SysTime high precision)
         local con_msg = string.format("[%-6s%s] %s: %s",
             nameupper,
-            os.date("%H:%M:%S"),
+            formatTimestamp(),
             lineinfo,
             msg)
 
@@ -74,11 +83,11 @@ for i, x in ipairs(modes) do
             Msg(con_msg, "\n")
         end
 
-        -- Output to log file (full date and time)
+        -- Output to log file (high precision SysTime timestamp)
         if log.outfile then
             local str = string.format("[%-6s%s] %s: %s\n",
                 nameupper,
-                os.date(),
+                formatTimestamp(),
                 lineinfo,
                 msg)
             file.Append(log.outfile, str)
