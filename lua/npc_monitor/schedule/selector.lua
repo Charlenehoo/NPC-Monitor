@@ -13,7 +13,8 @@ local function selectSchedule(npc, lastSchedule, currentSchedule)
     if IsValid(enemy) and enemy:GetClass() == CONSTANTS.RAGADOLL_DUMMY_CLASS then return nil end
 
     if currentSchedule == SCHED_IDLE_STAND or
-        currentSchedule == SCHED_ALERT_STAND then
+        currentSchedule == SCHED_ALERT_STAND or
+        currentSchedule == SCHED_ALERT_FACE_BESTSOUND then
         local candidates = {}
         NPCMonitor.ForEachActiveDummy(function(dummy)
             if IsValid(dummy) and dummy:IsPotentialExecutioner(npc) then
