@@ -10,7 +10,6 @@ local log                           = include("npc_monitor/logging/log.lua")
 local helpers                       = include("npc_monitor/helpers.lua")
 local findNearestEntity             = helpers.findNearestEntity
 local getEyePos                     = helpers.getEyePos
-local getPelvisPos                  = helpers.getPelvisPos
 
 local BONE_FALLBACK_ORDER           = include("npc_monitor/config/bones.lua")
 
@@ -150,10 +149,27 @@ function ENT:Init(owner, ragdoll)
     self._RepositionAttempt = 0
 
     -- 位置提取策略初始化
+    -- 第一个策略始终是眼睛位置
     self._PositionStrategies = {
-        { name = "eye",    getPos = function(ragdoll) return getEyePos(ragdoll) end },
-        { name = "pelvis", getPos = function(ragdoll) return getPelvisPos(ragdoll) end },
+        { name = "eye", getPos = function(ragdoll) return getEyePos(ragdoll) end },
     }
+
+    -- 根据准备好的骨骼顺序表构建后续策略
+    for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
+        local bone = boneName -- 避免闭包捕获循环变量
+        table.insert(self._PositionStrategies, {
+            name = bone,
+            getPos = function(ragdoll)
+                local boneID = ragdoll:LookupBone(bone)
+                if boneID then
+                    local pos = ragdoll:GetBonePosition(boneID)
+                    if pos then return pos end
+                end
+                return nil -- 骨骼不存在或获取失败
+            end
+        })
+    end
+
     self._PositionStrategyIndex = 1
     self._PositionStrategyFailCount = 0
     self._LastPositionStrategyResetTime = now
@@ -165,12 +181,29 @@ function ENT:_GetActivePosition()
     local ragdoll = self._Ragdoll
     if not IsValid(ragdoll) then return nil end
 
-    local strategy = self._PositionStrategies[self._PositionStrategyIndex]
-    if strategy then
-        return strategy.getPos(ragdoll)
-    else
-        return ragdoll:GetPos()
+    local strategies = self._PositionStrategies
+    local index = self._PositionStrategyIndex or 1
+    local maxAttempts = #strategies
+    local attempts = 0
+
+    -- 从当前索引开始，依次尝试所有策略，跳过返回 nil 的
+    while attempts < maxAttempts do
+        local strategy = strategies[index]
+        if strategy then
+            local pos = strategy.getPos(ragdoll)
+            if pos then
+                self._PositionStrategyIndex = index
+                return pos
+            end
+        end
+        -- 当前策略无效，尝试下一个（循环）
+        index = index % maxAttempts + 1
+        attempts = attempts + 1
     end
+
+    -- 所有策略都失败，回退到实体坐标
+    self._PositionStrategyIndex = 1
+    return ragdoll:GetPos()
 end
 
 function ENT:_AdvancePositionStrategy()
