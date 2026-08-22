@@ -2,26 +2,26 @@
 -- 核心事件总线：维护活跃 NPC/Dummy 集合，轮询状态变化并发布事件
 
 
-local CONSTANTS     = include("npc_monitor/config/constants.lua")
-local Events        = include("npc_monitor/core/events.lua")
-local log           = include("npc_monitor/logging/log.lua")
-local helpers       = include("npc_monitor/helpers.lua")
-local addUniqueHook = helpers.addUniqueHook
+local CONSTANTS         = include("npc_monitor/config/constants.lua")
+local Events            = include("npc_monitor/core/events.lua")
+local log               = include("npc_monitor/logging/log.lua")
+local helpers           = include("npc_monitor/helpers.lua")
+local addUniqueHook     = helpers.addUniqueHook
 
 -- 活跃实体集合（弱键，实体消失后自动清理）
-local activeNPCS    = setmetatable({}, { __mode = "k" })
-local activeDummies = setmetatable({}, { __mode = "k" })
+local activeNPCS        = setmetatable({}, { __mode = "k" })
+local activeDummies     = setmetatable({}, { __mode = "k" })
 
 -- 上次状态缓存（弱键，随实体一起回收）
-local lastSchedules = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
-local lastStates    = setmetatable({}, { __mode = "k" }) -- { npc -> state }
-local lastEnemies   = setmetatable({}, { __mode = "k" }) -- { npc -> enemy }
+local lastSchedules     = setmetatable({}, { __mode = "k" }) -- { npc -> schedule }
+local lastStates        = setmetatable({}, { __mode = "k" }) -- { npc -> state }
+local lastEnemies       = setmetatable({}, { __mode = "k" }) -- { npc -> enemy }
 
 -- 条件变化缓存（可选功能，默认不启用）
--- local allLastConditions = {} -- { condition -> { npc -> has } }
--- for name, id in pairs(COND) do
---     allLastConditions[name] = setmetatable({}, { __mode = "k" })
--- end
+local allLastConditions = {} -- { condition -> { npc -> has } }
+for name, id in pairs(COND) do
+    allLastConditions[name] = setmetatable({}, { __mode = "k" })
+end
 
 -- 内部：增强 NPC 的感知能力等
 local function enhanceNPC(npc)
@@ -36,9 +36,9 @@ local function initNpc(npc)
     lastEnemies[npc]   = npc:GetEnemy()
 
     -- 条件变化缓存初始化（如果启用）
-    -- for name, id in pairs(COND) do
-    --     allLastConditions[name][npc] = npc:HasCondition(id)
-    -- end
+    for name, id in pairs(COND) do
+        allLastConditions[name][npc] = npc:HasCondition(id)
+    end
 
     enhanceNPC(npc)
 end
@@ -52,11 +52,11 @@ local function cleanupEntity(ent)
     lastStates[ent]    = nil
     lastEnemies[ent]   = nil
 
-    -- if allLastConditions then
-    --     for name in pairs(allLastConditions) do
-    --         allLastConditions[name][ent] = nil
-    --     end
-    -- end
+    if allLastConditions then
+        for name in pairs(allLastConditions) do
+            allLastConditions[name][ent] = nil
+        end
+    end
 end
 
 -- 公开 API：遍历活跃 NPC
@@ -120,7 +120,7 @@ addUniqueHook("Tick", function()
     --     local lastConditions = allLastConditions[name] -- { npc -> has }
     --     for npc in pairs(activeNPCS) do
     --         if not IsValid(npc) then continue end
-    --
+
     --         local lastCondition = lastConditions[npc]
     --         local currentCondition = npc:HasCondition(id)
     --         if lastCondition ~= currentCondition then
