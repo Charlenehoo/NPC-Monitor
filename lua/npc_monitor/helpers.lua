@@ -260,6 +260,22 @@ function M.getRagdollState(ragdoll)
     -- thirdPartyMODState is not that accurate, so fix it with raw data
     local c = ragdoll.Hp_c
     local d = ragdoll.Hp_d
+
+    -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
+    local function isDead(offset)
+        return ((c ~= nil and c <= offset) or
+            (d ~= nil and d <= offset))
+    end
+    if stateName == "dead" then
+        if not isDead(0) then
+            stateName = "falling"
+        end
+    end
+    local JUST_FOR_SURE_OFFSET = -100
+    if isDead(JUST_FOR_SURE_OFFSET) then
+        stateName = "dead"
+    end
+
     if stateName == "falling" then
         local t = ragdoll.Anim_St
         if t and CurTime() > t then
@@ -273,21 +289,6 @@ function M.getRagdollState(ragdoll)
                 end
             end
         end
-    end
-
-    -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
-    local function isDead(offset)
-        return ((c ~= nil and c <= offset) or
-            (d ~= nil and d <= offset))
-    end
-    if stateName == "dead" then
-        if not isDead(0) then
-            stateName = "writhing"
-        end
-    end
-    local JUST_FOR_SURE_OFFSET = -100
-    if isDead(JUST_FOR_SURE_OFFSET) then
-        stateName = "dead"
     end
 
     return stateName
