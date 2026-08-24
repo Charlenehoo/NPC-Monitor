@@ -30,8 +30,8 @@ M.RAGDOLL_DUMMY              = {
     PROXY_MODEL                   = "models/editor/cube_small.mdl",
     SCALE                         = 0.03125, -- 1 / 32
     OFFSET                        = 100,
-    MIN_DIST_SUSTAIN              = 125,
-    MIN_DIST_ENTER                = 160,
+    MIN_DIST_SUSTAIN_SQR          = 16000,
+    MIN_DIST_ENTER_SQR            = 25000,
     RELATIONSHIP_MAX_PRIORITY     = 99,
     MAX_INIT_DURATION             = 0.3,
     EXECUTIONER_SEARCH_INTERVAL   = 0.3,
@@ -54,8 +54,7 @@ M.RAGDOLL_DUMMY              = {
     POSITION_RESET_INTERVAL       = 15.0,
     DEAD_REMOVE_DELAY             = 9.0,
 
-    MIN_DIST_SUSTAIN_SQR          = MIN_DIST_SUSTAIN * MIN_DIST_SUSTAIN,
-    MIN_DIST_ENTER_SQR            = MIN_DIST_ENTER * MIN_DIST_ENTER,
+
 }
 
 return M
