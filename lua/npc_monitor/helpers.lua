@@ -118,6 +118,32 @@ function M.findNearestPlayer(pos, maxDist)
     end)
 end
 
+--- 在指定位置附近随机选择一个符合过滤条件的实体
+-- @param pos Vector 中心位置
+-- @param maxDist number|nil 最大搜索距离（单位），nil 表示无限制
+-- @param source function|table|nil 数据源：函数（返回实体列表）或实体列表（表），默认 ents.GetAll
+-- @param filterFunc function|nil 谓词函数，接收实体，返回 boolean，默认只检查 IsValid
+-- @return Entity|nil 随机选择的实体，若没有则返回 nil
+function M.findRandomEntity(pos, maxDist, source, filterFunc)
+    source = source or ents.GetAll
+    filterFunc = filterFunc or function(ent) return IsValid(ent) end
+
+    local list = type(source) == "function" and source() or source
+    local candidates = {}
+    local maxDistSqr = maxDist and maxDist * maxDist or nil
+
+    for _, ent in ipairs(list) do
+        if filterFunc(ent) then
+            if not maxDistSqr or ent:GetPos():DistToSqr(pos) <= maxDistSqr then
+                table.insert(candidates, ent)
+            end
+        end
+    end
+
+    if #candidates == 0 then return nil end
+    return candidates[math.random(#candidates)]
+end
+
 function M.getEyePos(ent)
     if ent._GetEyePosStrategyCache then
         local s = ent._GetEyePosStrategyCache

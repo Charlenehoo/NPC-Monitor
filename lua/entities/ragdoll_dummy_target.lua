@@ -9,6 +9,7 @@ local CONSTANTS                     = include("npc_monitor/config/constants.lua"
 local log                           = include("npc_monitor/logging/log.lua")
 local helpers                       = include("npc_monitor/helpers.lua")
 local findNearestEntity             = helpers.findNearestEntity
+local findRandomEntity              = helpers.findRandomEntity
 local getEyePos                     = helpers.getEyePos
 local getRagdollState               = helpers.getRagdollState
 
@@ -365,9 +366,9 @@ function ENT:Think()
 
         local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
         if searchRadius then
-            local nearest = findNearestEntity(activePos, searchRadius, self._PotentialExecutioners, canBeExecutedBy)
-            if IsValid(nearest) then
-                self._Executioner = nearest
+            local chosen = findRandomEntity(activePos, searchRadius, self._PotentialExecutioners, canBeExecutedBy)
+            if IsValid(chosen) then
+                self._Executioner = chosen
                 self._ExecutionerAssignedTime = CurTime()
                 self._Executioner:AddEntityRelationship(self, D_HT, MAX)
                 -- 搜索成功，重置当前策略失败计数
