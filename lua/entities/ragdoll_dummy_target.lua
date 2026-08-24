@@ -18,8 +18,8 @@ local BONE_FALLBACK_ORDER           = include("npc_monitor/config/bones.lua")
 local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
 local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE
 local OFFSET                        = CONSTANTS.RAGDOLL_DUMMY.OFFSET
-local MIN_DIST_SUSTAIN_SQR          = CONSTANTS.MIN_DIST_SUSTAIN_SQR
-local MIN_DIST_ENTER_SQR            = CONSTANTS.MIN_DIST_ENTER_SQR
+local MIN_DIST_SUSTAIN_SQR          = CONSTANTS.RAGDOLL_DUMMY.MIN_DIST_SUSTAIN_SQR
+local MIN_DIST_ENTER_SQR            = CONSTANTS.RAGDOLL_DUMMY.MIN_DIST_ENTER_SQR
 local MAX                           = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
 
 local MAX_INIT_DURATION             = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
@@ -313,8 +313,12 @@ function ENT:Think()
     -- 进入检查：手动计算可见性
     local function canEnterExecution(npc)
         if not IsValid(npc) then return false end
+
         local shootPos = npc:GetShootPos() or npc:GetPos()
+        if not shootPos then return false end
+
         if (shootPos - activePos):LengthSqr() < MIN_DIST_ENTER_SQR then return false end
+
         if not npc:TestPVS(activePos) then return false end
         if not npc:IsInViewCone(activePos) then return false end
         if not npc:IsLineOfSightClear(activePos) then return false end
@@ -324,8 +328,12 @@ function ENT:Think()
     -- 维持检查：执行者已选定，验证其是否仍能有效攻击 dummy
     local function canSustainExecution(npc)
         if not IsValid(npc) then return false end
+
         local shootPos = npc:GetShootPos() or npc:GetPos()
+        if not shootPos then return false end
+
         if (shootPos - activePos):LengthSqr() < MIN_DIST_SUSTAIN_SQR then return false end
+
         if npc:GetEnemy() ~= self then
             return canEnterExecution(npc)
         end
