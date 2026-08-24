@@ -177,10 +177,9 @@ function ENT:Init(owner, ragdoll)
     self._PositionStrategyIndex = 1
     self._PositionStrategyFailCount = 0
     self._LastPositionStrategyResetTime = now
-
     self._LastBroadCastTime = now
-
     self._LastRagdollState = nil
+    self._DeadRemoveTimer = nil
 end
 
 function ENT:_GetActivePosition()
@@ -266,14 +265,39 @@ function ENT:Think()
 
     local ragdoll = self._Ragdoll
     if not IsValid(ragdoll) then
+        if self._DeadRemoveTimer then
+            timer.Remove(self._DeadRemoveTimer)
+            self._DeadRemoveTimer = nil
+        end
         self:Remove()
         return
     end
 
+    local previousRagdollState = self._LastRagdollState
     local ragdollState = self:_GetRagdollState(ragdoll)
+
     if ragdollState == "dead" then
-        self:_CancelExecutioner()
+        if previousRagdollState ~= "dead" then
+            -- 刚进入 dead 状态：取消当前执行者，并启动延迟移除定时器
+            log.info(self, "Ragdoll entered dead state, starting remove timer")
+            self:_CancelExecutioner()
+
+            local timerName = CONSTANTS.PLUGIN_NAME .. self:EntIndex() .. "_" .. CurTime() .. "_" .. math.random()
+            self._DeadRemoveTimer = timerName
+            timer.Create(timerName, CONSTANTS.RAGDOLL_DUMMY.DEAD_REMOVE_DELAY, 1, function()
+                if IsValid(self) then
+                    self:Remove()
+                end
+            end)
+        end
         return
+    end
+
+    -- ragdoll 非 dead：如果之前有 dead 定时器，则取消它（复活）
+    if self._DeadRemoveTimer then
+        timer.Remove(self._DeadRemoveTimer)
+        self._DeadRemoveTimer = nil
+        log.info(self, "Ragdoll revived, cancelled dead remove timer")
     end
 
     -- 获取当前策略下的活动位置
