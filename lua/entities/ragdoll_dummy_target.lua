@@ -310,6 +310,7 @@ function ENT:Think()
 
     local function canBeExecutedBy(npc)
         if not IsValid(npc) then return false end
+        if npc:HasCondition(COND.WEAPON_BLOCKED_BY_FRIEND) then return false end
         if not npc:TestPVS(activePos) then return false end
         if not npc:IsInViewCone(activePos) then return false end
         if not npc:IsLineOfSightClear(activePos) then return false end
