@@ -261,6 +261,15 @@ function ENT:_CancelExecutioner()
     self._LastSearchTime = 0
 end
 
+-- 维持检查：执行者已选定，验证其是否仍能有效攻击 dummy
+function ENT:_CanSustainExecution(npc)
+    if not IsValid(npc) then return false end
+    if npc:GetEnemy() ~= self then return false end               -- 已失去目标
+    if npc:HasCondition(COND.WEAPON_BLOCKED_BY_FRIEND) then return false end
+    if not npc:HasCondition(COND.SEE_ENEMY) then return false end -- 看不到 enemy
+    return true
+end
+
 function ENT:Think()
     local now = CurTime()
 
@@ -308,22 +317,13 @@ function ENT:Think()
         return
     end
 
-    local function canBeExecutedBy(npc)
-        if not IsValid(npc) then return false end
-        if npc:HasCondition(COND.WEAPON_BLOCKED_BY_FRIEND) then return false end
-        if not npc:TestPVS(activePos) then return false end
-        if not npc:IsInViewCone(activePos) then return false end
-        if not npc:IsLineOfSightClear(activePos) then return false end
-        return true
-    end
-
     -- 执行者存在时的验证与定位
     if IsValid(self._Executioner) then
         if now - self._LastExecutionerCheckTime > EXECUTIONER_VALIDATE_INTERVAL then
             self._LastExecutionerCheckTime = now
 
             local exec = self._Executioner
-            if canBeExecutedBy(exec) then
+            if self:_CanSustainExecution(exec) then
                 self._ExecutionerFailCount = 0
 
                 if now - self._ExecutionerAssignedTime > EXECUTIONER_TIMEOUT then
@@ -343,9 +343,9 @@ function ENT:Think()
 
         if IsValid(self._Executioner) then
             local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (activePos - shootPos):GetNormalized()
-            self:SetPos(shootPos + dir * OFFSET)
-            self:SetAngles(dir:GetNegated():Angle())
+            local dir = (shootPos - activePos):GetNormalized()
+            self:SetPos(activePos + dir * OFFSET)
+            self:SetAngles(dir:Angle())
             return
         end
     end
@@ -367,7 +367,16 @@ function ENT:Think()
 
         local searchRadius = STATE_TO_SEARCH_RADIUS[ragdollState]
         if searchRadius then
-            local chosen = findRandomEntity(activePos, searchRadius, self._PotentialExecutioners, canBeExecutedBy)
+            -- 进入检查：手动计算可见性
+            local function canEnterExecution(npc)
+                if not IsValid(npc) then return false end
+                if not npc:TestPVS(activePos) then return false end
+                if not npc:IsInViewCone(activePos) then return false end
+                if not npc:IsLineOfSightClear(activePos) then return false end
+                return true
+            end
+
+            local chosen = findRandomEntity(activePos, searchRadius, self._PotentialExecutioners, canEnterExecution)
             if IsValid(chosen) then
                 self._Executioner = chosen
                 self._ExecutionerAssignedTime = CurTime()
