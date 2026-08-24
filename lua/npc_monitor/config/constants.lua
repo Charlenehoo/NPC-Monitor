@@ -29,11 +29,10 @@ M.HEAR_NOISE_DISTANCE_FACTOR = 0.1
 M.RAGDOLL_DUMMY              = {
     PROXY_MODEL                   = "models/editor/cube_small.mdl",
     SCALE                         = 0.03125, -- 1 / 32
-    OFFSET                        = 50,
+    OFFSET                        = 100,
     RELATIONSHIP_MAX_PRIORITY     = 99,
 
     MAX_INIT_DURATION             = 0.3,
-    -- EXECUTIONER_REFRESH_INTERVAL = 6.0,
     EXECUTIONER_SEARCH_INTERVAL   = 0.3,
     EXECUTIONER_VALIDATE_INTERVAL = 0.6,
     EXECUTIONER_MAX_FAIL_COUNT    = 2,
@@ -42,17 +41,15 @@ M.RAGDOLL_DUMMY              = {
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
         falling  = 400,
-        writhing = 160,
-        crawling = 1000,
+        writhing = 250,
+        crawling = 630,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
 
-    REPOSITION_INTERVAL           = 0.15,               -- 极短冷却，保持高频尝试
-    REPOSITION_OFFSET_RANGE       = Vector(25, 25, 15), -- 最大偏移范围（对称）
-
-    REPOSITION_RADIUS_MIN         = 100,
-    REPOSITION_RADIUS_MAX         = 150,
+    REPOSITION_INTERVAL           = 0.15, -- 极短冷却，保持高频尝试
+    REPOSITION_RADIUS_MIN         = 200,
+    REPOSITION_RADIUS_MAX         = 315,
     REPOSITION_HEIGHT_MIN         = -25,
     REPOSITION_HEIGHT_MAX         = 50,
 
