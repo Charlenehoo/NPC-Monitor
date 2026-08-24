@@ -30,32 +30,32 @@ M.RAGDOLL_DUMMY              = {
     PROXY_MODEL                   = "models/editor/cube_small.mdl",
     SCALE                         = 0.03125, -- 1 / 32
     OFFSET                        = 100,
+    MIN_DIST_SUSTAIN              = 125,
+    MIN_DIST_ENTER                = 160,
     RELATIONSHIP_MAX_PRIORITY     = 99,
-
     MAX_INIT_DURATION             = 0.3,
     EXECUTIONER_SEARCH_INTERVAL   = 0.3,
     EXECUTIONER_VALIDATE_INTERVAL = 0.6,
     EXECUTIONER_MAX_FAIL_COUNT    = 2,
     EXECUTIONER_TIMEOUT           = 3.0,
-
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
-        falling  = 400,
-        writhing = 250,
-        crawling = 630,
+        falling  = 500,
+        writhing = 315,
+        crawling = 800,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
-
     REPOSITION_INTERVAL           = 0.15, -- 极短冷却，保持高频尝试
     REPOSITION_RADIUS_MIN         = 200,
-    REPOSITION_RADIUS_MAX         = 315,
+    REPOSITION_RADIUS_MAX         = 250,
     REPOSITION_HEIGHT_MIN         = -25,
     REPOSITION_HEIGHT_MAX         = 50,
-
     POSITION_RESET_INTERVAL       = 15.0,
-
     DEAD_REMOVE_DELAY             = 9.0,
+
+    MIN_DIST_SUSTAIN_SQR          = MIN_DIST_SUSTAIN * MIN_DIST_SUSTAIN,
+    MIN_DIST_ENTER_SQR            = MIN_DIST_ENTER * MIN_DIST_ENTER,
 }
 
 return M
