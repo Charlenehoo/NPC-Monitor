@@ -77,6 +77,9 @@ end
 function ENT:IsPotentialExecutioner(npc)
     if not IsValid(npc) then return false end
 
+    -- 新增：如果 ragdoll 已死或 dummy 自身处于 dead 监控状态，则不作为潜在执行者目标
+    if self._LastRagdollState == "dead" then return false end
+
     local potentials = self._PotentialExecutioners or {}
     for _, p in ipairs(potentials) do
         if p == npc then
@@ -176,6 +179,8 @@ function ENT:Init(owner, ragdoll)
     self._LastPositionStrategyResetTime = now
 
     self._LastBroadCastTime = now
+
+    self._LastRagdollState = nil
 end
 
 function ENT:_GetActivePosition()
@@ -267,7 +272,7 @@ function ENT:Think()
 
     local ragdollState = self:_GetRagdollState(ragdoll)
     if ragdollState == "dead" then
-        self:Remove()
+        self:_CancelExecutioner()
         return
     end
 
