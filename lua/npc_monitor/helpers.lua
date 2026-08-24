@@ -213,4 +213,58 @@ function M.getPelvisPos(ent)
     return ent:GetPos()
 end
 
+function M.getRagdollState(ragdoll)
+    local thirdPartyMODState = ragdoll:GetNW2Int("Animation_State", -1)
+    local stateName
+
+    if thirdPartyMODState == 0 then
+        stateName = "dead"
+    elseif thirdPartyMODState == 1 then
+        stateName = "falling"
+    elseif thirdPartyMODState == 2 then
+        stateName = "writhing"
+    elseif thirdPartyMODState == 3 then
+        stateName = "crawling"
+    elseif thirdPartyMODState == 4 then
+        stateName = "reviving"
+    else
+        stateName = "init"
+    end
+
+    -- thirdPartyMODState is not that accurate, so fix it with raw data
+    local c = ragdoll.Hp_c
+    local d = ragdoll.Hp_d
+    if stateName == "falling" then
+        local t = ragdoll.Anim_St
+        if t and CurTime() > t then
+            if c ~= nil and c > 0 and (d == nil or d > 0) then
+                if ragdoll.IsWrithing or ragdoll.IsTwitching then
+                    stateName = "writhing"
+                elseif ragdoll.IsReviving then
+                    stateName = "reviving"
+                else
+                    stateName = "crawling"
+                end
+            end
+        end
+    end
+
+    -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
+    local function isDead(offset)
+        return ((c ~= nil and c <= offset) or
+            (d ~= nil and d <= offset))
+    end
+    if stateName == "dead" then
+        if not isDead(0) then
+            stateName = "writhing"
+        end
+    end
+    local JUST_FOR_SURE_OFFSET = -100
+    if isDead(JUST_FOR_SURE_OFFSET) then
+        stateName = "dead"
+    end
+
+    return stateName
+end
+
 return M
