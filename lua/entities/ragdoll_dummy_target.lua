@@ -362,7 +362,7 @@ function ENT:Think()
         local shootPos = npc:GetShootPos() or npc:GetPos()
         if not shootPos then return false end
 
-        if (shootPos - activePos):LengthSqr() < MIN_DIST_ENTER_SQR then return false end
+        -- if (shootPos - activePos):LengthSqr() < MIN_DIST_ENTER_SQR then return false end
 
         if not npc:TestPVS(activePos) then return false end
         if not npc:IsInViewCone(activePos) then return false end
@@ -377,7 +377,7 @@ function ENT:Think()
         local shootPos = npc:GetShootPos() or npc:GetPos()
         if not shootPos then return false end
 
-        if (shootPos - activePos):LengthSqr() < MIN_DIST_SUSTAIN_SQR then return false end
+        -- if (shootPos - activePos):LengthSqr() < MIN_DIST_SUSTAIN_SQR then return false end
 
         if npc:GetEnemy() ~= self then
             return canEnterExecution(npc)

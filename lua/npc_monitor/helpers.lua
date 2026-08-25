@@ -1,10 +1,11 @@
 -- npc_monitor/helpers.lua
 -- 通用辅助函数，供 NPC Monitor 各模块使用
-local CONSTANTS = include("npc_monitor/config/constants.lua")
-local Enum      = include("npc_monitor/config/enum.lua")
-local log       = include("npc_monitor/logging/log.lua")
+local CONSTANTS           = include("npc_monitor/config/constants.lua")
+local Enum                = include("npc_monitor/config/enum.lua")
+local log                 = include("npc_monitor/logging/log.lua")
+local BONE_FALLBACK_ORDER = include("npc_monitor/config/bones.lua")
 
-local M         = {}
+local M                   = {}
 
 local function _addHook(eventName, func, appendix)
     appendix = appendix or ""
@@ -260,18 +261,70 @@ local function getSubStateByFlag(ragdoll)
     local isWrithing = ragdoll.IsWrithing or false
     local isTwitching = ragdoll.IsTwitching or false
     local isReviving = ragdoll.IsReviving or false
-
-    if isWrithing or isTwitching then
-        return "writhing"
-    end
-
-    if isReviving then
-        return "reviving"
-    end
-
+    if isWrithing or isTwitching then return "writhing" end
+    if isReviving then return "reviving" end
     return nil
 end
 
+-- 在文件顶部构建 ValveBiped 骨骼查找表（仅一次）
+local valveBipedBones = {}
+for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
+    valveBipedBones[boneName] = true
+end
+
+-- 检查 ragdoll 是否有任何 ValveBiped 骨骼在运动
+-- 构建 ValveBiped 骨骼查找表（在文件加载时构建一次）
+local valveBipedBones = {}
+for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
+    valveBipedBones[boneName] = true
+end
+
+-- 返回 false 表示所有骨骼持续静止超过 1 秒（视为“死”），true 表示仍有运动或静止时间不足 1 秒
+local function isRagdollMoving(ragdoll)
+    if not IsValid(ragdoll) then return true end
+
+    local count = ragdoll:GetPhysicsObjectCount()
+    local anyMoving = false
+    for i = 0, count - 1 do
+        local boneID = ragdoll:TranslatePhysBoneToBone(i)
+        if boneID and boneID >= 0 then
+            local boneName = ragdoll:GetBoneName(boneID)
+            if valveBipedBones[boneName] then
+                local phys = ragdoll:GetPhysicsObjectNum(i)
+                if IsValid(phys) then
+                    local angvel = phys:GetAngleVelocity()
+
+                    -- 阈值：角速度平方 > 0.25（约 30°/s
+                    if angvel:LengthSqr() > 0.25 then
+                        anyMoving = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    local now = CurTime()
+    if anyMoving then
+        -- 有运动，清除静止计时
+        ragdoll._staticSince = nil
+        return true
+    else
+        -- 当前所有相关骨骼静止
+        if not ragdoll._staticSince then
+            -- 第一次检测到静止，记录时间并仍视为运动（避免瞬时误判）
+            ragdoll._staticSince = now
+            return true
+        else
+            -- 已静止一段时间，检查是否超过 1 秒
+            if now - ragdoll._staticSince >= 1.0 then
+                return false -- 持续静止超过 1 秒，视为“死”
+            else
+                return true  -- 静止时间不足 1 秒，仍视为运动
+            end
+        end
+    end
+end
 function M.getRagdollState(ragdoll)
     local state = ragdoll:GetNW2Int("Animation_State", -1)
     local isWrithing = ragdoll.IsWrithing or false
@@ -281,6 +334,7 @@ function M.getRagdollState(ragdoll)
     local isDead_d = ragdoll.Isdead_d or false
     local hp_c = ragdoll.Hp_c
     local hp_d = ragdoll.Hp_d
+    local animSt = ragdoll.Anim_St
 
     local inDeath = false
     local inCrawl = false
@@ -305,44 +359,52 @@ function M.getRagdollState(ragdoll)
     local mainStateDecisionMaker
     local subStateDecisionMaker
 
-    -- 表优先
-    if inDeath then
-        mainStateDecisionMaker = "table"
-        subStateDecisionMaker = "table"
-        result = "falling"
-    elseif inCrawl then
-        mainStateDecisionMaker = "table"
-
-        local flagState = getSubStateByFlag(ragdoll)
-        if flagState then
-            subStateDecisionMaker = "flag"
-            result = flagState
-        else
-            local nwState = getStateByNW(state)
-            if nwState == "writhing" or nwState == "crawling" or nwState == "reviving" then
-                subStateDecisionMaker = "NW (sub-state)"
-                result = nwState
-            else
-                -- 异常，回退到 crawling
-                subStateDecisionMaker = "NW (fallback)"
-                result = "crawling"
-            end
-        end
+    -- 最高优先级：骨骼静止检测
+    if not isRagdollMoving(ragdoll) then
+        mainStateDecisionMaker = "velocity"
+        subStateDecisionMaker = "velocity (static)"
+        result = "dead"
     else
-        -- 不在任何表中
-        if isDead_c then
-            mainStateDecisionMaker = "flag (Isdead_c)"
-            subStateDecisionMaker = "flag (Isdead_c)"
-            result = "dead"
-        elseif (hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0) then
-            mainStateDecisionMaker = "HP"
-            subStateDecisionMaker = "HP"
-            result = "dead"
+        -- 原有逻辑
+        if inDeath then
+            mainStateDecisionMaker = "table"
+            subStateDecisionMaker = "table"
+            result = "falling"
+        elseif inCrawl then
+            mainStateDecisionMaker = "table"
+            local flagState = getSubStateByFlag(ragdoll)
+            if flagState then
+                subStateDecisionMaker = "flag"
+                result = flagState
+            else
+                local nwState = getStateByNW(state)
+                if nwState == "writhing" or nwState == "crawling" or nwState == "reviving" then
+                    subStateDecisionMaker = "NW (sub-state)"
+                    result = nwState
+                else
+                    subStateDecisionMaker = "fallback"
+                    result = "crawling"
+                end
+            end
         else
-            mainStateDecisionMaker = "NW"
-            subStateDecisionMaker = "NW (sub-state)"
-
-            result = getStateByNW(state)
+            -- 不在任何表中
+            if isDead_c then
+                mainStateDecisionMaker = "flag (Isdead_c)"
+                subStateDecisionMaker = "flag (Isdead_c)"
+                result = "dead"
+            elseif (hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0) then
+                mainStateDecisionMaker = "HP"
+                subStateDecisionMaker = "HP"
+                result = "dead"
+            else
+                mainStateDecisionMaker = "NW"
+                subStateDecisionMaker = "NW"
+                result = getStateByNW(state)
+                if result == "dead" then
+                    subStateDecisionMaker = "unknown"
+                    result = "init"
+                end
+            end
         end
     end
 
@@ -359,7 +421,7 @@ function M.getRagdollState(ragdoll)
         isDead_d = isDead_d,
         hp_c = hp_c,
         hp_d = hp_d,
-        animSt = ragdoll.Anim_St,
+        animSt = animSt,
         currentTime = CurTime(),
     }
 
