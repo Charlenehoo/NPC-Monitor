@@ -40,9 +40,9 @@ M.RAGDOLL_DUMMY              = {
     EXECUTIONER_TIMEOUT           = 3.0,
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
-        falling  = 200,
-        writhing = 125,
-        crawling = 315,
+        falling  = 315,
+        writhing = 160,
+        crawling = 630,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
