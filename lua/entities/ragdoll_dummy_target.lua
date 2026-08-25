@@ -99,40 +99,68 @@ function ENT:_TryReposition(activePos)
         table.insert(filter, ragdoll)
     end
 
-    local maxAttempts = 100
+    local maxAttempts      = 20
+    local rMin             = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MIN
+    local rMax             = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MAX
+    local traceStartHeight = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_TRACE_START_HEIGHT or 100
+    local traceEndDepth    = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_TRACE_END_DEPTH or -100
+    local navBeneathLimit  = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_NAV_BENEATH_LIMIT or 100
 
-    -- 圆环柱参数：优先使用新配置，否则回退到旧的水平偏移范围
-    local rMin = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MIN
-    local rMax = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_RADIUS_MAX
-    local hMin = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_HEIGHT_MIN
-    local hMax = CONSTANTS.RAGDOLL_DUMMY.REPOSITION_HEIGHT_MAX
+    -- 检查一个水平点是否可作为稳定的地面放置点
+    -- 返回：成功时返回地面位置（Vector），失败返回 nil
+    local function tryGetValidGroundPos(horizontalPos)
+        local traceStart = horizontalPos + Vector(0, 0, traceStartHeight)
+        local traceEnd   = horizontalPos + Vector(0, 0, traceEndDepth)
 
-    for _ = 1, maxAttempts do
-        -- 随机角度 0 ~ 2π
-        local theta = math.random() * 2 * math.pi
-        -- 随机半径 rMin ~ rMax
-        local r = rMin + (rMax - rMin) * math.random()
-        -- 随机高度 hMin ~ hMax
-        local z = hMin + (hMax - hMin) * math.random()
-
-        local offset = Vector(r * math.cos(theta), r * math.sin(theta), z)
-        local candidatePos = activePos + offset
-
-        local tr = util.TraceLine({
-            start = activePos,
-            endpos = candidatePos,
+        local groundTr   = util.TraceLine({
+            start = traceStart,
+            endpos = traceEnd,
             filter = filter,
             mask = MASK_SOLID
         })
 
-        if not tr.Hit then
-            self:SetPos(candidatePos)
+        if not groundTr.Hit then return nil end
+
+        local normal = groundTr.HitNormal
+        if not normal or normal.z < 0.7 then return nil end
+
+        local groundPos = groundTr.HitPos
+
+        -- 视线检查：activePos 到地面点不能被阻挡
+        local losTr = util.TraceLine({
+            start = activePos,
+            endpos = groundPos,
+            filter = filter,
+            mask = MASK_SOLID
+        })
+        if losTr.Hit then return nil end
+
+        -- 导航网格检查
+        local navArea = navmesh.GetNavArea(groundPos, navBeneathLimit)
+        if not navArea then return nil end
+
+        return groundPos
+    end
+
+    -- 随机尝试
+    for _ = 1, maxAttempts do
+        local theta = math.random() * 2 * math.pi
+        local r = rMin + (rMax - rMin) * math.random()
+        local horizontalPos = activePos + Vector(r * math.cos(theta), r * math.sin(theta), 0)
+
+        local groundPos = tryGetValidGroundPos(horizontalPos)
+        if groundPos then
+            self:SetPos(groundPos + Vector(0, 0, 1))
             return
         end
     end
 
-    -- 没有找到可通过射线检查的随机点，退回到活动位置
-    self:SetPos(activePos)
+    -- 所有随机尝试失败：尝试直接放在 activePos 正下方的地面
+    local fallbackGround = tryGetValidGroundPos(activePos)
+    if fallbackGround then
+        self:SetPos(fallbackGround + Vector(0, 0, 1))
+    end
+    -- 如果连脚下都没有稳定地面，则保持原位置不变
 end
 
 function ENT:Init(owner, ragdoll)
