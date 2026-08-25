@@ -273,7 +273,6 @@ local function getSubStateByFlag(ragdoll)
 end
 
 function M.getRagdollState(ragdoll)
-    -- 收集所有关键变量
     local state = ragdoll:GetNW2Int("Animation_State", -1)
     local isWrithing = ragdoll.IsWrithing or false
     local isTwitching = ragdoll.IsTwitching or false
@@ -284,7 +283,6 @@ function M.getRagdollState(ragdoll)
     local hp_d = ragdoll.Hp_d
     local animSt = ragdoll.Anim_St
 
-    -- 检查驱动表
     local inDeath = false
     local inCrawl = false
     if Orgn_Rag_Tb_Death then
@@ -306,7 +304,6 @@ function M.getRagdollState(ragdoll)
     local mainStateDecisionMaker
     local subStateDecisionMaker
 
-    -- 逻辑：以驱动表优先
     if inDeath then
         mainStateDecisionMaker = "table"
         subStateDecisionMaker = "table"
@@ -315,12 +312,26 @@ function M.getRagdollState(ragdoll)
     elseif inCrawl then
         mainStateDecisionMaker = "table"
 
-        result = getSubStateByFlag(ragdoll)
-        if not result then
+        local subState = getSubStateByFlag(ragdoll)
+        if subState then
             subStateDecisionMaker = "flag"
+            result = subState
         else
-            subStateDecisionMaker = "NW"
-            result = getStateByNW(state)
+            local nwState = getStateByNW(state)
+            result = nwState
+
+            local crawlSubStates = {
+                writhing = true,
+                crawling = true,
+                reviving = true,
+            }
+
+            if crawlSubStates[nwState] then
+                subStateDecisionMaker = "NW"
+            else
+                mainStateDecisionMaker = "table -> NW"
+                subStateDecisionMaker = "NW"
+            end
         end
     else
         mainStateDecisionMaker = "NW"
@@ -333,8 +344,8 @@ function M.getRagdollState(ragdoll)
         end
 
         if result == "dead" and not isDead(0) then
-            mainStateDecisionMaker = "HP"
-            subStateDecisionMaker = "flag"
+            mainStateDecisionMaker = "NW -> HP"
+            subStateDecisionMaker = "NW -> flag"
 
             result = getSubStateByFlag(ragdoll)
             if not result then
@@ -343,14 +354,13 @@ function M.getRagdollState(ragdoll)
         end
 
         if result ~= "dead" and isDead(-100) then
-            mainStateDecisionMaker = "HP"
-            subStateDecisionMaker = "flag"
+            mainStateDecisionMaker = "NW -> HP"
+            subStateDecisionMaker = "NW -> flag"
 
             result = "dead"
         end
     end
 
-    -- 构建决策依据表
     local decision = {
         mainStateDecisionMaker = mainStateDecisionMaker,
         subStateDecisionMaker = subStateDecisionMaker,
