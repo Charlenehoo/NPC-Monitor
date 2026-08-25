@@ -40,21 +40,19 @@ M.RAGDOLL_DUMMY              = {
     EXECUTIONER_TIMEOUT           = 3.0,
     STATE_TO_SEARCH_RADIUS        = {
         init     = nil,
-        falling  = 315,
+        falling  = 250,
         writhing = 200,
-        crawling = 500,
+        crawling = 315,
         reviving = M.NPC_MAX_LOOK_DISTANCE,
         dead     = nil,
     },
-    REPOSITION_INTERVAL           = 0.15, -- 极短冷却，保持高频尝试
+    REPOSITION_INTERVAL           = 1.5,
     REPOSITION_RADIUS_MIN         = 160,
-    REPOSITION_RADIUS_MAX         = 250,
+    REPOSITION_RADIUS_MAX         = 200,
     REPOSITION_HEIGHT_MIN         = -25,
     REPOSITION_HEIGHT_MAX         = 50,
     POSITION_RESET_INTERVAL       = 15.0,
     DEAD_REMOVE_DELAY             = 9.0,
-
-
 }
 
 return M
