@@ -256,7 +256,7 @@ local function getStateByNW(nw)
     end
 end
 
-local function getSubStateByFag(ragdoll)
+local function getSubStateByFlag(ragdoll)
     local isWrithing = ragdoll.IsWrithing or false
     local isTwitching = ragdoll.IsTwitching or false
     local isReviving = ragdoll.IsReviving or false
@@ -315,7 +315,7 @@ function M.getRagdollState(ragdoll)
     elseif inCrawl then
         mainStateDecisionMaker = "table"
 
-        result = getSubStateByFag(ragdoll)
+        result = getSubStateByFlag(ragdoll)
         if not result then
             subStateDecisionMaker = "flag"
         else
@@ -336,7 +336,7 @@ function M.getRagdollState(ragdoll)
             mainStateDecisionMaker = "HP"
             subStateDecisionMaker = "flag"
 
-            result = getSubStateByFag(ragdoll)
+            result = getSubStateByFlag(ragdoll)
             if not result then
                 result = "crawling"
             end
