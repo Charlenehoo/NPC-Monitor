@@ -240,6 +240,38 @@ function M.getPelvisPos(ent)
     return ent:GetPos()
 end
 
+local function getStateByNW(nw)
+    if nw == 0 then
+        return "dead"
+    elseif nw == 1 then
+        return "falling"
+    elseif nw == 2 then
+        return "writhing"
+    elseif nw == 3 then
+        return "crawling"
+    elseif nw == 4 then
+        return "reviving"
+    else
+        return "init"
+    end
+end
+
+local function getSubStateByFag(ragdoll)
+    local isWrithing = ragdoll.IsWrithing or false
+    local isTwitching = ragdoll.IsTwitching or false
+    local isReviving = ragdoll.IsReviving or false
+
+    if isWrithing or isTwitching then
+        return "writhing"
+    end
+
+    if isReviving then
+        return "reviving"
+    end
+
+    return nil
+end
+
 function M.getRagdollState(ragdoll)
     -- 收集所有关键变量
     local state = ragdoll:GetNW2Int("Animation_State", -1)
@@ -271,66 +303,57 @@ function M.getRagdollState(ragdoll)
     end
 
     local result
+    local mainStateDecisionMaker
+    local subStateDecisionMaker
 
     -- 逻辑：以驱动表优先
     if inDeath then
+        mainStateDecisionMaker = "table"
+        subStateDecisionMaker = "table"
+
         result = "falling"
     elseif inCrawl then
-        if isWrithing or isTwitching then
-            result = "writhing"
-        elseif isReviving then
-            result = "reviving"
+        mainStateDecisionMaker = "table"
+
+        result = getSubStateByFag(ragdoll)
+        if not result then
+            subStateDecisionMaker = "flag"
         else
-            -- 如果标记为 dead 但仍在表中，说明 MOD 未清理，视其为 crawling
-            if isDead_c and state == 0 then
-                result = "crawling"
-            else
-                if state == 2 then
-                    result = "writhing"
-                elseif state == 3 then
-                    result = "crawling"
-                elseif state == 4 then
-                    result = "reviving"
-                else
-                    result = "crawling"
-                end
-            end
+            subStateDecisionMaker = "NW"
+            result = getStateByNW(state)
         end
     else
-        -- 不在任何驱动表
-        if state == 0 then
-            result = "dead"
-        elseif state == 1 then
-            result = "falling"
-        elseif state == 2 then
-            result = "writhing"
-        elseif state == 3 then
-            result = "crawling"
-        elseif state == 4 then
-            result = "reviving"
-        else
-            result = "init"
-        end
+        mainStateDecisionMaker = "NW"
+        subStateDecisionMaker = "NW"
 
-        -- 血量辅助修正
+        result = getStateByNW(state)
+
         local function isDead(offset)
             return ((hp_c ~= nil and hp_c <= offset) or (hp_d ~= nil and hp_d <= offset))
         end
+
         if result == "dead" and not isDead(0) then
-            result = "falling"
-        end
-        if isDead(-100) then
-            result = "dead"
-        end
-        if result == "falling" and animSt and CurTime() > animSt then
-            if hp_c ~= nil and hp_c > 0 and (hp_d == nil or hp_d > 0) then
+            mainStateDecisionMaker = "HP"
+            subStateDecisionMaker = "flag"
+
+            result = getSubStateByFag(ragdoll)
+            if not result then
                 result = "crawling"
             end
+        end
+
+        if isDead(-100) then
+            mainStateDecisionMaker = "HP"
+            subStateDecisionMaker = "flag"
+
+            result = "dead"
         end
     end
 
     -- 构建决策依据表
     local decision = {
+        mainStateDecisionMaker = mainStateDecisionMaker,
+        subStateDecisionMaker = subStateDecisionMaker,
         stateNW = state,
         inDeath = inDeath,
         inCrawl = inCrawl,
@@ -343,7 +366,6 @@ function M.getRagdollState(ragdoll)
         hp_d = hp_d,
         animSt = animSt,
         currentTime = CurTime(),
-        result = result,
     }
 
     return result, decision
