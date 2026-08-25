@@ -312,7 +312,6 @@ function M.getRagdollStateMod(ragdoll)
     local isDead_d = ragdoll.Isdead_d or false
     local hp_c = ragdoll.Hp_c
     local hp_d = ragdoll.Hp_d
-    local animSt = ragdoll.Anim_St
 
     local inDeath = false
     local inCrawl = false
@@ -390,8 +389,6 @@ function M.getRagdollStateMod(ragdoll)
         isDead_d = isDead_d,
         hp_c = hp_c,
         hp_d = hp_d,
-        animSt = animSt,
-        currentTime = CurTime(),
     }
 
     return result, decision

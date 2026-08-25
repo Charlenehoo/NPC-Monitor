@@ -213,13 +213,14 @@ function ENT:Init(owner, ragdoll)
     self._LastRagdollState = nil
     self._DeadRemoveTimer = nil
 
-    -- 死亡判定相关状态
-    self._modDead = false      -- MOD 内部状态是否判定死亡
-    self._velocityDead = false -- 速度静止判定是否判定死亡
+    self._RagdollState = "init"  -- 当前 MOD 状态
+    self._LastRagdollState = nil -- 用于变化检测
+    self._modDead = false
+    self._velocityDead = false
     self._staticCheckCount = 0
     self._nextStaticCheck = 0
     self._lastStaticResult = false
-    self._wasDead = false -- 上一次的综合死亡状态（用于日志）
+    self._wasDead = false
     self._DeadRemoveTimer = nil
 end
 
@@ -307,14 +308,40 @@ function ENT:_UpdateVelocityDead(ragdoll, now)
 end
 
 function ENT:_UpdateDeathState(ragdoll, now)
-    -- 1. MOD 死亡判定
-    local modState, _ = getRagdollStateMod(ragdoll)
+    -- 获取 MOD 内部状态
+    local modState, decision = getRagdollStateMod(ragdoll)
+
+    -- 状态变化处理（保留原 _GetRagdollState 的日志与重置逻辑）
+    if self._LastRagdollState ~= modState then
+        local owner = self._Owner
+        if IsValid(owner) and owner:IsPlayer() then
+            log.trace(ragdoll, "RagdollState: ", self._LastRagdollState or "(none)", " -> ", modState)
+            log.trace("  mainStateDecisionMaker=", decision.mainStateDecisionMaker)
+            log.trace("  subStateDecisionMaker=", decision.subStateDecisionMaker)
+            log.trace("  stateNW=", decision.stateNW)
+            log.trace("  inDeath=", decision.inDeath)
+            log.trace("  inCrawl=", decision.inCrawl)
+            log.trace("  isWrithing=", decision.isWrithing)
+            log.trace("  isTwitching=", decision.isTwitching)
+            log.trace("  isReviving=", decision.isReviving)
+            log.trace("  isDead_c=", decision.isDead_c)
+            log.trace("  isDead_d=", decision.isDead_d)
+            log.trace("  hp_c=", tostring(decision.hp_c))
+            log.trace("  hp_d=", tostring(decision.hp_d))
+        end
+
+        self._LastRagdollState = modState
+        self:_ResetPositionStrategy()
+    end
+
+    -- 保存当前 MOD 状态（供 Think 使用）
+    self._RagdollState = modState
+
     local modDead = (modState == "dead")
 
-    -- 2. 速度死亡判定
+    -- 更新速度死亡判定
     local velocityDead = self:_UpdateVelocityDead(ragdoll, now)
 
-    -- 记录标志变化
     if self._modDead ~= modDead then
         log.trace(self, "ModDead changed: ", self._modDead, " -> ", modDead)
         self._modDead = modDead
@@ -324,11 +351,10 @@ function ENT:_UpdateDeathState(ragdoll, now)
         self._velocityDead = velocityDead
     end
 
-    -- 3. 计算综合死亡计数（范围 0~2）
+    -- 综合计数（0~2）
     local deathCount = (modDead and 1 or 0) + (velocityDead and 1 or 0)
     local isDead = deathCount > 0
 
-    -- 综合状态变化日志
     if isDead ~= self._wasDead then
         log.info(self, "Overall death state: ", self._wasDead, " -> ", isDead,
             " (modDead=", modDead, ", velocityDead=", velocityDead, ", count=", deathCount, ")")
@@ -385,6 +411,8 @@ function ENT:Think()
     if self:_HandleDeathState(isDead, ragdoll) then
         return -- 死亡状态下不再执行后续逻辑
     end
+
+    local ragdollState = self._RagdollState
 
     -- 获取当前策略下的活动位置
     local activePos = self:_GetActivePosition()
