@@ -44,7 +44,7 @@ function ENT:Initialize()
     self:SetNPCClass(CLASS_NONE)
     self:SetSolid(SOLID_NONE)
     self:SetCollisionGroup(COLLISION_GROUP_NONE)
-    -- self:SetNoDraw(true)
+    self:SetNoDraw(true)
 end
 
 function ENT:_TryRefreshPotentialExecutioners()
