@@ -235,11 +235,24 @@ function ENT:_ResetPositionStrategy()
 end
 
 function ENT:_GetRagdollState(ragdoll)
-    local stateName = getRagdollState(ragdoll)
+    local stateName, decision = getRagdollState(ragdoll)
 
     local lastState = self._LastRagdollState
     if lastState ~= stateName then
         log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
+
+        log.trace("stateNW=", decision.stateNW)
+        log.trace("inDeath=", decision.inDeath)
+        log.trace("inCrawl=", decision.inCrawl)
+        log.trace("isWrithing=", decision.isWrithing)
+        log.trace("isTwitching=", decision.isTwitching)
+        log.trace("isReviving=", decision.isReviving)
+        log.trace("isDead_c=", decision.isDead_c)
+        log.trace("isDead_d=", decision.isDead_d)
+        log.trace("hp_c=", tostring(decision.hp_c))
+        log.trace("hp_d=", tostring(decision.hp_d))
+        log.trace("animSt=", tostring(decision.animSt))
+
         self._LastRagdollState = stateName
         -- ragdoll 状态变化时，重置位置策略到最高优先级
         self:_ResetPositionStrategy()
