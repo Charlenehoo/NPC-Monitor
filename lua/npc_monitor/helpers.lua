@@ -1,9 +1,10 @@
 -- npc_monitor/helpers.lua
 -- 通用辅助函数，供 NPC Monitor 各模块使用
 local CONSTANTS = include("npc_monitor/config/constants.lua")
-local Enum = include("npc_monitor/config/enum.lua")
+local Enum      = include("npc_monitor/config/enum.lua")
+local log       = include("npc_monitor/logging/log.lua")
 
-local M = {}
+local M         = {}
 
 local function _addHook(eventName, func, appendix)
     appendix = appendix or ""
@@ -240,58 +241,112 @@ function M.getPelvisPos(ent)
 end
 
 function M.getRagdollState(ragdoll)
-    local thirdPartyMODState = ragdoll:GetNW2Int("Animation_State", -1)
-    local stateName
+    -- 收集所有关键变量
+    local state = ragdoll:GetNW2Int("Animation_State", -1)
+    local isWrithing = ragdoll.IsWrithing or false
+    local isTwitching = ragdoll.IsTwitching or false
+    local isReviving = ragdoll.IsReviving or false
+    local isDead_c = ragdoll.Isdead_c or false
+    local isDead_d = ragdoll.Isdead_d or false
+    local hp_c = ragdoll.Hp_c
+    local hp_d = ragdoll.Hp_d
+    local animSt = ragdoll.Anim_St
 
-    if thirdPartyMODState == 0 then
-        stateName = "dead"
-    elseif thirdPartyMODState == 1 then
-        stateName = "falling"
-    elseif thirdPartyMODState == 2 then
-        stateName = "writhing"
-    elseif thirdPartyMODState == 3 then
-        stateName = "crawling"
-    elseif thirdPartyMODState == 4 then
-        stateName = "reviving"
-    else
-        stateName = "init"
-    end
-
-    -- thirdPartyMODState is not that accurate, so fix it with raw data
-    local c = ragdoll.Hp_c
-    local d = ragdoll.Hp_d
-
-    -- 按照语义是 dead, 但是由于这个第三方 MOD 实在是太不靠谱, 我还是用血量判断好了
-    local function isDead(offset)
-        return ((c ~= nil and c <= offset) or
-            (d ~= nil and d <= offset))
-    end
-    if stateName == "dead" then
-        if not isDead(0) then
-            stateName = "falling"
+    -- 检查驱动表
+    local inDeath = false
+    local inCrawl = false
+    if Orgn_Rag_Tb_Death then
+        for _, v in ipairs(Orgn_Rag_Tb_Death) do
+            if v == ragdoll then
+                inDeath = true; break
+            end
         end
     end
-    local JUST_FOR_SURE_OFFSET = -100
-    if isDead(JUST_FOR_SURE_OFFSET) then
-        stateName = "dead"
-    end
-
-    if stateName == "falling" then
-        local t = ragdoll.Anim_St
-        if t and CurTime() > t then
-            if c ~= nil and c > 0 and (d == nil or d > 0) then
-                if ragdoll.IsWrithing or ragdoll.IsTwitching then
-                    stateName = "writhing"
-                elseif ragdoll.IsReviving then
-                    stateName = "reviving"
-                else
-                    stateName = "crawling"
-                end
+    if Orgn_Rag_Tb_Crawl then
+        for _, v in ipairs(Orgn_Rag_Tb_Crawl) do
+            if v == ragdoll then
+                inCrawl = true; break
             end
         end
     end
 
-    return stateName
+    local result
+
+    -- 逻辑：以驱动表优先
+    if inDeath then
+        result = "falling"
+    elseif inCrawl then
+        if isWrithing or isTwitching then
+            result = "writhing"
+        elseif isReviving then
+            result = "reviving"
+        else
+            -- 如果标记为 dead 但仍在表中，说明 MOD 未清理，视其为 crawling
+            if isDead_c and state == 0 then
+                result = "crawling"
+            else
+                if state == 2 then
+                    result = "writhing"
+                elseif state == 3 then
+                    result = "crawling"
+                elseif state == 4 then
+                    result = "reviving"
+                else
+                    result = "crawling"
+                end
+            end
+        end
+    else
+        -- 不在任何驱动表
+        if state == 0 then
+            result = "dead"
+        elseif state == 1 then
+            result = "falling"
+        elseif state == 2 then
+            result = "writhing"
+        elseif state == 3 then
+            result = "crawling"
+        elseif state == 4 then
+            result = "reviving"
+        else
+            result = "init"
+        end
+
+        -- 血量辅助修正
+        local function isDead(offset)
+            return ((hp_c ~= nil and hp_c <= offset) or (hp_d ~= nil and hp_d <= offset))
+        end
+        if result == "dead" and not isDead(0) then
+            result = "falling"
+        end
+        if isDead(-100) then
+            result = "dead"
+        end
+        if result == "falling" and animSt and CurTime() > animSt then
+            if hp_c ~= nil and hp_c > 0 and (hp_d == nil or hp_d > 0) then
+                result = "crawling"
+            end
+        end
+    end
+
+    -- 构建决策依据表
+    local decision = {
+        stateNW = state,
+        inDeath = inDeath,
+        inCrawl = inCrawl,
+        isWrithing = isWrithing,
+        isTwitching = isTwitching,
+        isReviving = isReviving,
+        isDead_c = isDead_c,
+        isDead_d = isDead_d,
+        hp_c = hp_c,
+        hp_d = hp_d,
+        animSt = animSt,
+        currentTime = CurTime(),
+        result = result,
+    }
+
+    return result, decision
 end
 
 return M
