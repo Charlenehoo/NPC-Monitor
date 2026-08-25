@@ -23,25 +23,25 @@ end
 -- end)
 
 -- 订阅 state 变化事件
-addUniqueHook(Events.OnStateChange, function(npc, last, current)
-    if shouldLog(npc) then
-        log.info(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
-    end
-end)
+-- addUniqueHook(Events.OnStateChange, function(npc, last, current)
+--     if shouldLog(npc) then
+--         log.info(npc, "StateChange: ", getStateName(last), " -> ", getStateName(current))
+--     end
+-- end)
 
 -- 订阅 enemy 变化事件
-addUniqueHook(Events.OnEnemyChange, function(npc, last, current)
-    if shouldLog(npc) then
-        last = last or "No Enemy"
-        current = current or "No Enemy"
-        log.info(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
-    end
-end)
+-- addUniqueHook(Events.OnEnemyChange, function(npc, last, current)
+--     if shouldLog(npc) then
+--         last = last or "No Enemy"
+--         current = current or "No Enemy"
+--         log.info(npc, "EnemyChange: ", tostring(last), " -> ", tostring(current))
+--     end
+-- end)
 
 -- 如果启用条件变化检测，可在此订阅 Events.OnCondition
-hook.Add(Events.OnCondition, "NPCMonitor.EventLogger.OnCondition",
-    function(npc, conditionName, conditionID, lastValue, currentValue)
-        if not shouldLog(npc) then return end
-        local status = currentValue and "SET" or "CLEAR"
-        log.trace(npc, "ConditionChange: ", conditionName, " [", status, "]")
-    end)
+-- hook.Add(Events.OnCondition, "NPCMonitor.EventLogger.OnCondition",
+--     function(npc, conditionName, conditionID, lastValue, currentValue)
+--         if not shouldLog(npc) then return end
+--         local status = currentValue and "SET" or "CLEAR"
+--         log.trace(npc, "ConditionChange: ", conditionName, " [", status, "]")
+--     end)

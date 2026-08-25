@@ -289,6 +289,7 @@ function ENT:Think()
             self._DeadRemoveTimer = timerName
             timer.Create(timerName, CONSTANTS.RAGDOLL_DUMMY.DEAD_REMOVE_DELAY, 1, function()
                 if IsValid(self) then
+                    log.info(self, "Removing ragdoll dummy due to dead state timeout")
                     self:Remove()
                 end
             end)
