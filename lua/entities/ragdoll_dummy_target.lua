@@ -8,7 +8,6 @@ if CLIENT then return end
 local CONSTANTS                     = include("npc_monitor/config/constants.lua")
 local log                           = include("npc_monitor/logging/log.lua")
 local helpers                       = include("npc_monitor/helpers.lua")
-local findNearestEntity             = helpers.findNearestEntity
 local findRandomEntity              = helpers.findRandomEntity
 local getEyePos                     = helpers.getEyePos
 local getRagdollStateMod            = helpers.getRagdollStateMod
@@ -19,8 +18,6 @@ local BONE_FALLBACK_ORDER           = include("npc_monitor/config/bones.lua")
 local PROXY_MODEL                   = CONSTANTS.RAGDOLL_DUMMY.PROXY_MODEL
 local SCALE_1                       = CONSTANTS.RAGDOLL_DUMMY.SCALE
 local OFFSET                        = CONSTANTS.RAGDOLL_DUMMY.OFFSET
-local MIN_DIST_SUSTAIN_SQR          = CONSTANTS.RAGDOLL_DUMMY.MIN_DIST_SUSTAIN_SQR
-local MIN_DIST_ENTER_SQR            = CONSTANTS.RAGDOLL_DUMMY.MIN_DIST_ENTER_SQR
 local MAX                           = CONSTANTS.RAGDOLL_DUMMY.RELATIONSHIP_MAX_PRIORITY
 
 local MAX_INIT_DURATION             = CONSTANTS.RAGDOLL_DUMMY.MAX_INIT_DURATION
@@ -170,22 +167,47 @@ function ENT:Init(owner, ragdoll)
 
     local now = CurTime()
 
+    -- ==============================
+    -- 实体关联（Owner / Ragdoll）
+    -- ==============================
+    -- 所有者实体（通常为玩家），用于判断仇恨关系和广播执行者
     self._Owner = owner
+
+    -- 关联的布娃娃实体，dummy 的目标就是模拟其位置
     self._Ragdoll = ragdoll
+
+    -- ==============================
+    -- 执行者（Executioner）管理
+    -- ==============================
+    -- 上次搜索执行者的时间（初始设为 now + MAX_INIT_DURATION，延迟首次搜索）
     self._LastSearchTime = now + MAX_INIT_DURATION
+
+    -- 上次验证执行者的时间（初始设为 now - 1，确保第一次 Think 立即验证）
     self._LastExecutionerCheckTime = now - 1
+
+    -- 执行者验证连续失败次数（用于判断是否需要降级位置策略）
     self._ExecutionerFailCount = 0
+
+    -- 当前指定的执行者 NPC（负责攻击 dummy 的实体）
     self._Executioner = nil
+
+    -- 执行者被指派的时间（用于超时判断）
     self._ExecutionerAssignedTime = nil
 
+    -- 潜在执行者列表（所有对 owner 有仇恨的 NPC）
     self._PotentialExecutioners = {}
     self:_TryRefreshPotentialExecutioners()
 
+    -- ==============================
+    -- 重定位（Reposition）控制
+    -- ==============================
+    -- 上次执行重定位的时间（初始为 0，表示立即可以重定位）
     self._LastRepositionTime = 0
-    self._RepositionAttempt = 0
 
-    -- 位置提取策略初始化
-    -- 第一个策略始终是眼睛位置
+    -- ==============================
+    -- 位置提取策略（Position Strategies）
+    -- ==============================
+    -- 存储所有可行的位置提取策略，按优先级排序（首个为眼睛位置，后续为骨骼）
     self._PositionStrategies = {
         { name = "eye", getPos = function(ragdoll) return getEyePos(ragdoll) end },
     }
@@ -206,21 +228,52 @@ function ENT:Init(owner, ragdoll)
         })
     end
 
+    -- 当前使用的位置策略索引（初始为 1，即最高优先级：眼睛）
     self._PositionStrategyIndex = 1
-    self._PositionStrategyFailCount = 0
-    self._LastPositionStrategyResetTime = now
-    self._LastBroadCastTime = now
-    self._LastRagdollState = nil
-    self._DeadRemoveTimer = nil
 
-    self._RagdollState = "init"  -- 当前 MOD 状态
-    self._LastRagdollState = nil -- 用于变化检测
+    -- 当前策略连续失败次数（达到阈值会降级到下一个策略）
+    self._PositionStrategyFailCount = 0
+
+    -- 上次重置位置策略到最高优先级的时间（用于定期重新尝试眼睛位置）
+    self._LastPositionStrategyResetTime = now
+
+    -- ==============================
+    -- 广播控制（Broadcast Control）
+    -- ==============================
+    -- 上次向潜在执行者广播控制请求的时间（用于定期尝试控制空闲 NPC）
+    self._LastBroadCastTime = now
+
+    -- ==============================
+    -- 死亡状态检测（Death State Detection）
+    -- ==============================
+    -- 当前由 MOD 内部逻辑推断出的 ragdoll 状态字符串（如 "init"、"falling"、"writhing"、"crawling"、"reviving"、"dead"）
+    self._RagdollState = "init"
+
+    -- 上一次的 MOD 状态（用于检测状态变化，触发日志和策略重置）
+    self._LastRagdollState = nil
+
+    -- MOD 判定是否死亡（布尔值，来自 getRagdollStateMod 的结果）
     self._modDead = false
+
+    -- 速度判定是否死亡（布尔值，来自骨骼物理速度检测）
     self._velocityDead = false
+
+    -- 连续静止检查计数（速度检测中，连续静止达到阈值则判定死亡）
     self._staticCheckCount = 0
+
+    -- 下一次执行静止检查的时间（用于限制定期检查频率）
     self._nextStaticCheck = 0
+
+    -- 上一次静止检查的结果（true 表示判定为静止）
     self._lastStaticResult = false
+
+    -- 综合死亡状态（上一次的值，用于检测变化并记录日志）
     self._wasDead = false
+
+    -- ==============================
+    -- 死亡移除定时器（Death Removal Timer）
+    -- ==============================
+    -- 存储死亡移除定时器的名称（用于取消定时器），nil 表示无定时器
     self._DeadRemoveTimer = nil
 end
 
