@@ -414,9 +414,29 @@ function ENT:Think()
 
         if IsValid(self._Executioner) then
             local shootPos = self._Executioner:GetShootPos() or self._Executioner:GetPos()
-            local dir = (shootPos - activePos):GetNormalized()
-            self:SetPos(activePos + dir * OFFSET)
-            self:SetAngles(dir:Angle())
+
+            local tr = util.TraceLine({
+                start = shootPos,
+                endpos = activePos,
+                filter = { self, self._Executioner }, -- 忽略 dummy 自己和执行者自身
+                mask = MASK_SOLID
+            })
+
+            local dummyPos
+            local toShooter
+            if tr.Hit then
+                -- 射线被 ragdoll 或其他物体阻挡，说明目标点被遮挡
+                -- 将 dummy 放置在命中点向执行者方向偏移一小段距离，确保它不被遮挡
+                toShooter = (shootPos - tr.HitPos):GetNormalized()
+                dummyPos = tr.HitPos + toShooter * OFFSET
+            else
+                -- 无遮挡，使用原有固定偏移方式（保持旧行为作为回退）
+                toShooter = (shootPos - activePos):GetNormalized()
+                dummyPos = activePos + toShooter * OFFSET
+            end
+
+            self:SetPos(dummyPos)
+            self:SetAngles(toShooter:Angle())
             return
         end
     end
