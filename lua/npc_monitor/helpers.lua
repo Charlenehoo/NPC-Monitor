@@ -272,19 +272,36 @@ for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
     valveBipedBones[boneName] = true
 end
 
--- 检查 ragdoll 是否有任何 ValveBiped 骨骼在运动
--- 构建 ValveBiped 骨骼查找表（在文件加载时构建一次）
+-- 构建 ValveBiped 骨骼查找表（仅构建一次）
 local valveBipedBones = {}
 for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
     valveBipedBones[boneName] = true
 end
 
--- 返回 false 表示所有骨骼持续静止超过阈值时间（视为“死”），true 表示仍有运动或静止时间不足
+-- 检查 ragdoll 是否有任何 ValveBiped 骨骼在运动
+-- 返回 true 表示仍在运动（或尚未满足持续静止条件），false 表示已持续静止并判定为死亡
 local function isRagdollMoving(ragdoll)
     if not IsValid(ragdoll) then return true end
 
-    local count = ragdoll:GetPhysicsObjectCount()
+    local now = CurTime()
+    local interval = CONSTANTS.RAGDOLL_DUMMY.STATIC_CHECK_INTERVAL or 1
+    local consecutiveRequired = CONSTANTS.RAGDOLL_DUMMY.STATIC_CONSECUTIVE_COUNT or 2
+
+    -- 初始化或重置检查时间
+    if not ragdoll._nextStaticCheck then
+        ragdoll._nextStaticCheck = now + interval
+        ragdoll._staticCheckCount = 0
+        return true
+    end
+
+    -- 未到检查时间，直接返回上次结论（避免频繁计算）
+    if now < ragdoll._nextStaticCheck then
+        return ragdoll._lastStaticResult or true
+    end
+
+    -- 到达检查时间，进行速度检测
     local anyMoving = false
+    local count = ragdoll:GetPhysicsObjectCount()
     for i = 0, count - 1 do
         local boneID = ragdoll:TranslatePhysBoneToBone(i)
         if boneID and boneID >= 0 then
@@ -293,8 +310,9 @@ local function isRagdollMoving(ragdoll)
                 local phys = ragdoll:GetPhysicsObjectNum(i)
                 if IsValid(phys) then
                     local angvel = phys:GetAngleVelocity()
-                    -- 使用常量阈值
-                    if angvel:LengthSqr() > CONSTANTS.RAGDOLL_DUMMY.STATIC_ANG_VEL_SQR_THRESHOLD then
+                    local linvel = phys:GetVelocity()
+                    if angvel:LengthSqr() > (CONSTANTS.RAGDOLL_DUMMY.STATIC_ANG_VEL_SQR_THRESHOLD or 1) or
+                        linvel:LengthSqr() > (CONSTANTS.RAGDOLL_DUMMY.STATIC_LIN_VEL_SQR_THRESHOLD or 25) then
                         anyMoving = true
                         break
                     end
@@ -303,22 +321,19 @@ local function isRagdollMoving(ragdoll)
         end
     end
 
-    local now = CurTime()
+    -- 更新连续静止计数
     if anyMoving then
-        ragdoll._staticSince = nil
-        return true
+        ragdoll._staticCheckCount = 0
+        ragdoll._lastStaticResult = true
     else
-        if not ragdoll._staticSince then
-            ragdoll._staticSince = now
-            return true
-        else
-            if now - ragdoll._staticSince >= CONSTANTS.RAGDOLL_DUMMY.STATIC_DURATION_THRESHOLD then
-                return false
-            else
-                return true
-            end
-        end
+        ragdoll._staticCheckCount = (ragdoll._staticCheckCount or 0) + 1
+        ragdoll._lastStaticResult = (ragdoll._staticCheckCount < consecutiveRequired)
     end
+
+    -- 设置下一次检查时间
+    ragdoll._nextStaticCheck = now + interval
+
+    return ragdoll._lastStaticResult
 end
 
 function M.getRagdollState(ragdoll)

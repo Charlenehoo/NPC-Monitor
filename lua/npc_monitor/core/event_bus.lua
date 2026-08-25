@@ -90,6 +90,10 @@ end)
 addUniqueHook("CreateEntityRagdoll", function(owner, ragdoll)
     if not IsValid(owner) or not IsValid(ragdoll) then return end
 
+    if CONSTANTS.PLAYER_ONLY then
+        if not owner:IsPlayer() then return end
+    end
+
     local dummy = ents.Create(CONSTANTS.RAGADOLL_DUMMY_CLASS)
     if IsValid(dummy) then
         dummy:Spawn()

@@ -10,6 +10,8 @@ M.NPC_MAX_LOOK_DISTANCE      = 6000
 
 M.SOUND_RAGDOLL              = SOUND_PLAYER
 
+M.PLAYER_ONLY                = true
+
 -- 默认原因持续时间（秒），当原因未单独配置 DURATION 时使用
 M.SHOOT_COVER_DURATION       = 3
 -- 声音提示持续时间（秒），用于 HEAR 原因默认持续时间及 EmitHint 的 duration 参数
@@ -54,10 +56,14 @@ M.RAGDOLL_DUMMY              = {
     POSITION_RESET_INTERVAL       = 15.0,
     DEAD_REMOVE_DELAY             = 9.0,
 
-    -- 骨骼静止判定阈值：角速度平方大于该值视为运动
+    -- 静止检查间隔（秒）
+    STATIC_CHECK_INTERVAL         = 1,
+    -- 连续静止检查次数达到该值则判定为死亡
+    STATIC_CONSECUTIVE_COUNT      = 2,
+    -- 角速度平方阈值（约 30°/s 对应 0.25，约 57°/s 对应 1.0）
     STATIC_ANG_VEL_SQR_THRESHOLD  = 1,
-    -- 持续静止超过该秒数后判定为死亡
-    STATIC_DURATION_THRESHOLD     = 1.0,
+    -- 线速度平方阈值（约 5 unit/s 对应 25）
+    STATIC_LIN_VEL_SQR_THRESHOLD  = 25,
 }
 
 return M
