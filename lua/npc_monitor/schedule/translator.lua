@@ -106,6 +106,8 @@ local function executeControl(npc, lastSchedule, currentSchedule)
         if lastDesiredSchedules[npc] then
             log.debug(npc, "Stop control: " ..
                 getScheduleName(lastDesiredSchedules[npc], npc))
+            log.debug(npc, "Engine Schedules: " ..
+                getScheduleName(currentSchedule, npc))
             lastDesiredSchedules[npc] = nil
         end
     end
