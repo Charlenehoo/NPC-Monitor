@@ -234,6 +234,21 @@ function ENT:_ResetPositionStrategy()
     end
 end
 
+function ENT:_CancelExecutioner()
+    local exec = self._Executioner
+    if IsValid(exec) then
+        exec:AddEntityRelationship(self, D_NU, MAX)
+        if exec:GetEnemy() == self then
+            exec:ClearEnemyMemory()
+            exec:SetEnemy(NULL)
+        end
+    end
+    self._Executioner = nil
+    self._ExecutionerFailCount = 0
+    self._ExecutionerAssignedTime = nil
+    self._LastSearchTime = 0
+end
+
 function ENT:_GetRagdollState(ragdoll)
     local stateName, decision = getRagdollState(ragdoll)
 
@@ -262,21 +277,6 @@ function ENT:_GetRagdollState(ragdoll)
     end
 
     return stateName
-end
-
-function ENT:_CancelExecutioner()
-    local exec = self._Executioner
-    if IsValid(exec) then
-        exec:AddEntityRelationship(self, D_NU, MAX)
-        if exec:GetEnemy() == self then
-            exec:ClearEnemyMemory()
-            exec:SetEnemy(NULL)
-        end
-    end
-    self._Executioner = nil
-    self._ExecutionerFailCount = 0
-    self._ExecutionerAssignedTime = nil
-    self._LastSearchTime = 0
 end
 
 function ENT:Think()

@@ -342,7 +342,7 @@ function M.getRagdollState(ragdoll)
             end
         end
 
-        if isDead(-100) then
+        if result ~= "dead" and isDead(-100) then
             mainStateDecisionMaker = "HP"
             subStateDecisionMaker = "flag"
 
