@@ -281,21 +281,22 @@ function M.getRagdollState(ragdoll)
     local isDead_d = ragdoll.Isdead_d or false
     local hp_c = ragdoll.Hp_c
     local hp_d = ragdoll.Hp_d
-    local animSt = ragdoll.Anim_St
 
     local inDeath = false
     local inCrawl = false
     if Orgn_Rag_Tb_Death then
         for _, v in ipairs(Orgn_Rag_Tb_Death) do
             if v == ragdoll then
-                inDeath = true; break
+                inDeath = true
+                break
             end
         end
     end
     if Orgn_Rag_Tb_Crawl then
         for _, v in ipairs(Orgn_Rag_Tb_Crawl) do
             if v == ragdoll then
-                inCrawl = true; break
+                inCrawl = true
+                break
             end
         end
     end
@@ -304,60 +305,44 @@ function M.getRagdollState(ragdoll)
     local mainStateDecisionMaker
     local subStateDecisionMaker
 
+    -- 表优先
     if inDeath then
         mainStateDecisionMaker = "table"
         subStateDecisionMaker = "table"
-
         result = "falling"
     elseif inCrawl then
         mainStateDecisionMaker = "table"
 
-        local subState = getSubStateByFlag(ragdoll)
-        if subState then
+        local flagState = getSubStateByFlag(ragdoll)
+        if flagState then
             subStateDecisionMaker = "flag"
-            result = subState
+            result = flagState
         else
             local nwState = getStateByNW(state)
-            result = nwState
-
-            local crawlSubStates = {
-                writhing = true,
-                crawling = true,
-                reviving = true,
-            }
-
-            if crawlSubStates[nwState] then
-                subStateDecisionMaker = "NW"
+            if nwState == "writhing" or nwState == "crawling" or nwState == "reviving" then
+                subStateDecisionMaker = "NW (sub-state)"
+                result = nwState
             else
-                mainStateDecisionMaker = "table -> NW"
-                subStateDecisionMaker = "NW"
-            end
-        end
-    else
-        mainStateDecisionMaker = "NW"
-        subStateDecisionMaker = "NW"
-
-        result = getStateByNW(state)
-
-        local function isDead(offset)
-            return ((hp_c ~= nil and hp_c <= offset) or (hp_d ~= nil and hp_d <= offset))
-        end
-
-        if result == "dead" and not isDead(0) then
-            mainStateDecisionMaker = "NW -> HP"
-            subStateDecisionMaker = "NW -> flag"
-
-            result = getSubStateByFlag(ragdoll)
-            if not result then
+                -- 异常，回退到 crawling
+                subStateDecisionMaker = "NW (fallback)"
                 result = "crawling"
             end
         end
-
-        if result ~= "dead" and isDead(-100) then
-            mainStateDecisionMaker = "NW -> HP"
-            subStateDecisionMaker = "NW -> flag"
-
+    else
+        -- 不在任何表中
+        if isDead_c then
+            mainStateDecisionMaker = "flag (Isdead_c)"
+            subStateDecisionMaker = "flag (Isdead_c)"
             result = "dead"
+        elseif (hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0) then
+            mainStateDecisionMaker = "HP"
+            subStateDecisionMaker = "HP"
+            result = "dead"
+        else
+            mainStateDecisionMaker = "NW"
+            subStateDecisionMaker = "NW (sub-state)"
+
+            result = getStateByNW(state)
         end
     end
 
@@ -374,7 +359,7 @@ function M.getRagdollState(ragdoll)
         isDead_d = isDead_d,
         hp_c = hp_c,
         hp_d = hp_d,
-        animSt = animSt,
+        animSt = ragdoll.Anim_St,
         currentTime = CurTime(),
     }
 
