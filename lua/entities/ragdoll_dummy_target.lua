@@ -284,20 +284,23 @@ function ENT:_GetRagdollState(ragdoll)
     if lastState ~= stateName then
         log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
 
-        log.trace("  mainStateDecisionMaker=", decision.mainStateDecisionMaker)
-        log.trace("  subStateDecisionMaker=", decision.subStateDecisionMaker)
-        log.trace("  stateNW=", decision.stateNW)
-        log.trace("  inDeath=", decision.inDeath)
-        log.trace("  inCrawl=", decision.inCrawl)
-        log.trace("  isWrithing=", decision.isWrithing)
-        log.trace("  isTwitching=", decision.isTwitching)
-        log.trace("  isReviving=", decision.isReviving)
-        log.trace("  isDead_c=", decision.isDead_c)
-        log.trace("  isDead_d=", decision.isDead_d)
-        log.trace("  hp_c=", tostring(decision.hp_c))
-        log.trace("  hp_d=", tostring(decision.hp_d))
-        log.trace("  animSt=", tostring(decision.animSt))
-        log.trace("  currentTime=", decision.currentTime)
+        local owner = self._Owner
+        if owner.IsPlayer and owner:IsPlayer() then
+            log.trace("  mainStateDecisionMaker=", decision.mainStateDecisionMaker)
+            log.trace("  subStateDecisionMaker=", decision.subStateDecisionMaker)
+            log.trace("  stateNW=", decision.stateNW)
+            log.trace("  inDeath=", decision.inDeath)
+            log.trace("  inCrawl=", decision.inCrawl)
+            log.trace("  isWrithing=", decision.isWrithing)
+            log.trace("  isTwitching=", decision.isTwitching)
+            log.trace("  isReviving=", decision.isReviving)
+            log.trace("  isDead_c=", decision.isDead_c)
+            log.trace("  isDead_d=", decision.isDead_d)
+            log.trace("  hp_c=", tostring(decision.hp_c))
+            log.trace("  hp_d=", tostring(decision.hp_d))
+            log.trace("  animSt=", tostring(decision.animSt))
+            log.trace("  currentTime=", decision.currentTime)
+        end
 
         self._LastRagdollState = stateName
         -- ragdoll 状态变化时，重置位置策略到最高优先级
