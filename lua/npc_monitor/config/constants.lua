@@ -53,6 +53,11 @@ M.RAGDOLL_DUMMY              = {
     REPOSITION_HEIGHT_MAX         = 50,
     POSITION_RESET_INTERVAL       = 15.0,
     DEAD_REMOVE_DELAY             = 9.0,
+
+    -- 骨骼静止判定阈值：角速度平方大于该值视为运动
+    STATIC_ANG_VEL_SQR_THRESHOLD  = 1,
+    -- 持续静止超过该秒数后判定为死亡
+    STATIC_DURATION_THRESHOLD     = 1.0,
 }
 
 return M

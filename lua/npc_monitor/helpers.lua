@@ -279,7 +279,7 @@ for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
     valveBipedBones[boneName] = true
 end
 
--- 返回 false 表示所有骨骼持续静止超过 1 秒（视为“死”），true 表示仍有运动或静止时间不足 1 秒
+-- 返回 false 表示所有骨骼持续静止超过阈值时间（视为“死”），true 表示仍有运动或静止时间不足
 local function isRagdollMoving(ragdoll)
     if not IsValid(ragdoll) then return true end
 
@@ -293,9 +293,8 @@ local function isRagdollMoving(ragdoll)
                 local phys = ragdoll:GetPhysicsObjectNum(i)
                 if IsValid(phys) then
                     local angvel = phys:GetAngleVelocity()
-
-                    -- 阈值：角速度平方 > 0.25（约 30°/s
-                    if angvel:LengthSqr() > 0.25 then
+                    -- 使用常量阈值
+                    if angvel:LengthSqr() > CONSTANTS.RAGDOLL_DUMMY.STATIC_ANG_VEL_SQR_THRESHOLD then
                         anyMoving = true
                         break
                     end
@@ -306,25 +305,22 @@ local function isRagdollMoving(ragdoll)
 
     local now = CurTime()
     if anyMoving then
-        -- 有运动，清除静止计时
         ragdoll._staticSince = nil
         return true
     else
-        -- 当前所有相关骨骼静止
         if not ragdoll._staticSince then
-            -- 第一次检测到静止，记录时间并仍视为运动（避免瞬时误判）
             ragdoll._staticSince = now
             return true
         else
-            -- 已静止一段时间，检查是否超过 1 秒
-            if now - ragdoll._staticSince >= 1.0 then
-                return false -- 持续静止超过 1 秒，视为“死”
+            if now - ragdoll._staticSince >= CONSTANTS.RAGDOLL_DUMMY.STATIC_DURATION_THRESHOLD then
+                return false
             else
-                return true  -- 静止时间不足 1 秒，仍视为运动
+                return true
             end
         end
     end
 end
+
 function M.getRagdollState(ragdoll)
     local state = ragdoll:GetNW2Int("Animation_State", -1)
     local isWrithing = ragdoll.IsWrithing or false
