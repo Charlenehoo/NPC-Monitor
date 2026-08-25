@@ -266,41 +266,20 @@ local function getSubStateByFlag(ragdoll)
     return nil
 end
 
--- 在文件顶部构建 ValveBiped 骨骼查找表（仅一次）
-local valveBipedBones = {}
-for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
-    valveBipedBones[boneName] = true
-end
-
 -- 构建 ValveBiped 骨骼查找表（仅构建一次）
 local valveBipedBones = {}
 for _, boneName in ipairs(BONE_FALLBACK_ORDER) do
     valveBipedBones[boneName] = true
 end
 
--- 检查 ragdoll 是否有任何 ValveBiped 骨骼在运动
--- 返回 true 表示仍在运动（或尚未满足持续静止条件），false 表示已持续静止并判定为死亡
-local function isRagdollMoving(ragdoll)
+-- 立即检查 ragdoll 是否存在任一 ValveBiped 骨骼的线速度或角速度超过阈值
+-- 返回 true 表示正在移动，false 表示静止
+function M.isRagdollMovingNow(ragdoll)
     if not IsValid(ragdoll) then return true end
 
-    local now = CurTime()
-    local interval = CONSTANTS.RAGDOLL_DUMMY.STATIC_CHECK_INTERVAL or 1
-    local consecutiveRequired = CONSTANTS.RAGDOLL_DUMMY.STATIC_CONSECUTIVE_COUNT or 2
+    local angThresholdSqr = CONSTANTS.RAGDOLL_DUMMY.STATIC_ANG_VEL_SQR_THRESHOLD or 1
+    local linThresholdSqr = CONSTANTS.RAGDOLL_DUMMY.STATIC_LIN_VEL_SQR_THRESHOLD or 25
 
-    -- 初始化或重置检查时间
-    if not ragdoll._nextStaticCheck then
-        ragdoll._nextStaticCheck = now + interval
-        ragdoll._staticCheckCount = 0
-        return true
-    end
-
-    -- 未到检查时间，直接返回上次结论（避免频繁计算）
-    if now < ragdoll._nextStaticCheck then
-        return ragdoll._lastStaticResult or true
-    end
-
-    -- 到达检查时间，进行速度检测
-    local anyMoving = false
     local count = ragdoll:GetPhysicsObjectCount()
     for i = 0, count - 1 do
         local boneID = ragdoll:TranslatePhysBoneToBone(i)
@@ -311,32 +290,20 @@ local function isRagdollMoving(ragdoll)
                 if IsValid(phys) then
                     local angvel = phys:GetAngleVelocity()
                     local linvel = phys:GetVelocity()
-                    if angvel:LengthSqr() > (CONSTANTS.RAGDOLL_DUMMY.STATIC_ANG_VEL_SQR_THRESHOLD or 1) or
-                        linvel:LengthSqr() > (CONSTANTS.RAGDOLL_DUMMY.STATIC_LIN_VEL_SQR_THRESHOLD or 25) then
-                        anyMoving = true
-                        break
+                    if angvel:LengthSqr() > angThresholdSqr or
+                        linvel:LengthSqr() > linThresholdSqr then
+                        return true
                     end
                 end
             end
         end
     end
 
-    -- 更新连续静止计数
-    if anyMoving then
-        ragdoll._staticCheckCount = 0
-        ragdoll._lastStaticResult = true
-    else
-        ragdoll._staticCheckCount = (ragdoll._staticCheckCount or 0) + 1
-        ragdoll._lastStaticResult = (ragdoll._staticCheckCount < consecutiveRequired)
-    end
-
-    -- 设置下一次检查时间
-    ragdoll._nextStaticCheck = now + interval
-
-    return ragdoll._lastStaticResult
+    return false
 end
 
-function M.getRagdollState(ragdoll)
+-- 纯函数：仅基于 MOD 内部状态判断 ragdoll 的状态
+function M.getRagdollStateMod(ragdoll)
     local state = ragdoll:GetNW2Int("Animation_State", -1)
     local isWrithing = ragdoll.IsWrithing or false
     local isTwitching = ragdoll.IsTwitching or false
@@ -370,51 +337,42 @@ function M.getRagdollState(ragdoll)
     local mainStateDecisionMaker
     local subStateDecisionMaker
 
-    -- 最高优先级：骨骼静止检测
-    if not isRagdollMoving(ragdoll) then
-        mainStateDecisionMaker = "velocity"
-        subStateDecisionMaker = "velocity (static)"
-        result = "dead"
-    else
-        -- 原有逻辑
-        if inDeath then
-            mainStateDecisionMaker = "table"
-            subStateDecisionMaker = "table"
-            result = "falling"
-        elseif inCrawl then
-            mainStateDecisionMaker = "table"
-            local flagState = getSubStateByFlag(ragdoll)
-            if flagState then
-                subStateDecisionMaker = "flag"
-                result = flagState
-            else
-                local nwState = getStateByNW(state)
-                if nwState == "writhing" or nwState == "crawling" or nwState == "reviving" then
-                    subStateDecisionMaker = "NW (sub-state)"
-                    result = nwState
-                else
-                    subStateDecisionMaker = "fallback"
-                    result = "crawling"
-                end
-            end
+    if inDeath then
+        mainStateDecisionMaker = "table"
+        subStateDecisionMaker = "table"
+        result = "falling"
+    elseif inCrawl then
+        mainStateDecisionMaker = "table"
+        local flagState = getSubStateByFlag(ragdoll)
+        if flagState then
+            subStateDecisionMaker = "flag"
+            result = flagState
         else
-            -- 不在任何表中
-            if isDead_c then
-                mainStateDecisionMaker = "flag (Isdead_c)"
-                subStateDecisionMaker = "flag (Isdead_c)"
-                result = "dead"
-            elseif (hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0) then
-                mainStateDecisionMaker = "HP"
-                subStateDecisionMaker = "HP"
-                result = "dead"
+            local nwState = getStateByNW(state)
+            if nwState == "writhing" or nwState == "crawling" or nwState == "reviving" then
+                subStateDecisionMaker = "NW (sub-state)"
+                result = nwState
             else
-                mainStateDecisionMaker = "NW"
-                subStateDecisionMaker = "NW"
-                result = getStateByNW(state)
-                if result == "dead" then
-                    subStateDecisionMaker = "unknown"
-                    result = "init"
-                end
+                subStateDecisionMaker = "fallback"
+                result = "crawling"
+            end
+        end
+    else
+        if isDead_c then
+            mainStateDecisionMaker = "flag (Isdead_c)"
+            subStateDecisionMaker = "flag (Isdead_c)"
+            result = "dead"
+        elseif (hp_c ~= nil and hp_c <= 0) or (hp_d ~= nil and hp_d <= 0) then
+            mainStateDecisionMaker = "HP"
+            subStateDecisionMaker = "HP"
+            result = "dead"
+        else
+            mainStateDecisionMaker = "NW"
+            subStateDecisionMaker = "NW"
+            result = getStateByNW(state)
+            if result == "dead" then
+                subStateDecisionMaker = "unknown"
+                result = "init"
             end
         end
     end

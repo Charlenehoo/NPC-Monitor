@@ -11,7 +11,8 @@ local helpers                       = include("npc_monitor/helpers.lua")
 local findNearestEntity             = helpers.findNearestEntity
 local findRandomEntity              = helpers.findRandomEntity
 local getEyePos                     = helpers.getEyePos
-local getRagdollState               = helpers.getRagdollState
+local getRagdollStateMod            = helpers.getRagdollStateMod
+local isRagdollMovingNow            = helpers.isRagdollMovingNow
 
 local BONE_FALLBACK_ORDER           = include("npc_monitor/config/bones.lua")
 
@@ -211,6 +212,15 @@ function ENT:Init(owner, ragdoll)
     self._LastBroadCastTime = now
     self._LastRagdollState = nil
     self._DeadRemoveTimer = nil
+
+    -- 死亡判定相关状态
+    self._modDead = false      -- MOD 内部状态是否判定死亡
+    self._velocityDead = false -- 速度静止判定是否判定死亡
+    self._staticCheckCount = 0
+    self._nextStaticCheck = 0
+    self._lastStaticResult = false
+    self._wasDead = false -- 上一次的综合死亡状态（用于日志）
+    self._DeadRemoveTimer = nil
 end
 
 function ENT:_GetActivePosition()
@@ -277,37 +287,82 @@ function ENT:_CancelExecutioner()
     self._LastSearchTime = 0
 end
 
-function ENT:_GetRagdollState(ragdoll)
-    local stateName, decision = getRagdollState(ragdoll)
+function ENT:_UpdateVelocityDead(ragdoll, now)
+    local interval = CONSTANTS.RAGDOLL_DUMMY.STATIC_CHECK_INTERVAL or 1
+    local consecutiveRequired = CONSTANTS.RAGDOLL_DUMMY.STATIC_CONSECUTIVE_COUNT or 2
 
-    local lastState = self._LastRagdollState
-    if lastState ~= stateName then
-        log.trace(ragdoll, "RagdollState: ", lastState or "(none)", " -> ", stateName)
-
-        local owner = self._Owner
-        if owner.IsPlayer and owner:IsPlayer() then
-            log.trace("  mainStateDecisionMaker=", decision.mainStateDecisionMaker)
-            log.trace("  subStateDecisionMaker=", decision.subStateDecisionMaker)
-            log.trace("  stateNW=", decision.stateNW)
-            log.trace("  inDeath=", decision.inDeath)
-            log.trace("  inCrawl=", decision.inCrawl)
-            log.trace("  isWrithing=", decision.isWrithing)
-            log.trace("  isTwitching=", decision.isTwitching)
-            log.trace("  isReviving=", decision.isReviving)
-            log.trace("  isDead_c=", decision.isDead_c)
-            log.trace("  isDead_d=", decision.isDead_d)
-            log.trace("  hp_c=", tostring(decision.hp_c))
-            log.trace("  hp_d=", tostring(decision.hp_d))
-            log.trace("  animSt=", tostring(decision.animSt))
-            log.trace("  currentTime=", decision.currentTime)
+    if now >= self._nextStaticCheck then
+        local moving = isRagdollMovingNow(ragdoll) -- 纯函数
+        if moving then
+            self._staticCheckCount = 0
+            self._lastStaticResult = false
+        else
+            self._staticCheckCount = self._staticCheckCount + 1
+            self._lastStaticResult = (self._staticCheckCount >= consecutiveRequired)
         end
-
-        self._LastRagdollState = stateName
-        -- ragdoll 状态变化时，重置位置策略到最高优先级
-        self:_ResetPositionStrategy()
+        self._nextStaticCheck = now + interval
     end
 
-    return stateName
+    return self._lastStaticResult
+end
+
+function ENT:_UpdateDeathState(ragdoll, now)
+    -- 1. MOD 死亡判定
+    local modState, _ = getRagdollStateMod(ragdoll)
+    local modDead = (modState == "dead")
+
+    -- 2. 速度死亡判定
+    local velocityDead = self:_UpdateVelocityDead(ragdoll, now)
+
+    -- 记录标志变化
+    if self._modDead ~= modDead then
+        log.trace(self, "ModDead changed: ", self._modDead, " -> ", modDead)
+        self._modDead = modDead
+    end
+    if self._velocityDead ~= velocityDead then
+        log.trace(self, "VelocityDead changed: ", self._velocityDead, " -> ", velocityDead)
+        self._velocityDead = velocityDead
+    end
+
+    -- 3. 计算综合死亡计数（范围 0~2）
+    local deathCount = (modDead and 1 or 0) + (velocityDead and 1 or 0)
+    local isDead = deathCount > 0
+
+    -- 综合状态变化日志
+    if isDead ~= self._wasDead then
+        log.info(self, "Overall death state: ", self._wasDead, " -> ", isDead,
+            " (modDead=", modDead, ", velocityDead=", velocityDead, ", count=", deathCount, ")")
+        self._wasDead = isDead
+    end
+
+    return isDead
+end
+
+function ENT:_HandleDeathState(isDead, ragdoll)
+    if isDead then
+        -- 进入死亡：取消执行者并启动移除定时器
+        if not self._DeadRemoveTimer then
+            self:_CancelExecutioner() -- 解除仇恨和敌人关系
+            local timerName = CONSTANTS.PLUGIN_NAME .. self:EntIndex() .. "_" .. CurTime() .. "_" .. math.random()
+            self._DeadRemoveTimer = timerName
+            timer.Create(timerName, CONSTANTS.RAGDOLL_DUMMY.DEAD_REMOVE_DELAY, 1, function()
+                if IsValid(self) then
+                    log.info(self, "Removing ragdoll dummy due to death timeout")
+                    self:Remove()
+                end
+            end)
+            log.info(self, "Ragdoll entered dead state, starting remove timer")
+        end
+        return true -- 表示处于死亡状态，跳过后续逻辑
+    else
+        -- 非死亡：若之前有定时器则取消
+        if self._DeadRemoveTimer then
+            timer.Remove(self._DeadRemoveTimer)
+            self._DeadRemoveTimer = nil
+            log.info(self, "Ragdoll revived, cancelled dead remove timer")
+        end
+        return false
+    end
 end
 
 function ENT:Think()
@@ -323,32 +378,12 @@ function ENT:Think()
         return
     end
 
-    local previousRagdollState = self._LastRagdollState
-    local ragdollState = self:_GetRagdollState(ragdoll)
+    -- 更新死亡状态（综合 MOD 与速度）
+    local isDead = self:_UpdateDeathState(ragdoll, now)
 
-    if ragdollState == "dead" then
-        if previousRagdollState ~= "dead" then
-            -- 刚进入 dead 状态：取消当前执行者，并启动延迟移除定时器
-            log.info(self, "Ragdoll entered dead state, starting remove timer")
-            self:_CancelExecutioner()
-
-            local timerName = CONSTANTS.PLUGIN_NAME .. self:EntIndex() .. "_" .. CurTime() .. "_" .. math.random()
-            self._DeadRemoveTimer = timerName
-            timer.Create(timerName, CONSTANTS.RAGDOLL_DUMMY.DEAD_REMOVE_DELAY, 1, function()
-                if IsValid(self) then
-                    log.info(self, "Removing ragdoll dummy due to dead state timeout")
-                    self:Remove()
-                end
-            end)
-        end
-        return
-    end
-
-    -- ragdoll 非 dead：如果之前有 dead 定时器，则取消它（复活）
-    if self._DeadRemoveTimer then
-        timer.Remove(self._DeadRemoveTimer)
-        self._DeadRemoveTimer = nil
-        log.info(self, "Ragdoll revived, cancelled dead remove timer")
+    -- 处理死亡定时器与执行者
+    if self:_HandleDeathState(isDead, ragdoll) then
+        return -- 死亡状态下不再执行后续逻辑
     end
 
     -- 获取当前策略下的活动位置
