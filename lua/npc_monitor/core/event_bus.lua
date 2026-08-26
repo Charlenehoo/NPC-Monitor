@@ -26,6 +26,7 @@ end
 -- 内部：增强 NPC 的感知能力等
 local function enhanceNPC(npc)
     npc:SetMaxLookDistance(CONSTANTS.NPC_MAX_LOOK_DISTANCE)
+    npc:SetKeyValue("wakeradius", CONSTANTS.NPC_MAX_LOOK_DISTANCE)
 end
 
 -- 内部：注册一个新 NPC 到事件总线
